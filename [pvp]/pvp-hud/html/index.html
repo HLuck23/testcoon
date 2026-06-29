@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PvP HUD</title>
+    <link rel="stylesheet" href="style.css">
+<base target="_blank">
+</head>
+<body>
+    <!-- Match Info (top center) -->
+    <div id="match-info" class="hidden">
+        <div class="match-mode" id="match-mode">REDZONE</div>
+        <div class="match-score" id="match-score">0 - 0</div>
+        <div class="match-timer" id="match-timer">10:00</div>
+    </div>
+
+    <!-- Kill Streak Medals (top center, under match info) -->
+    <div id="streak-medals"></div>
+
+    <!-- Health & Armor - Sleek Vertical Lines (bottom center, Redzone/Turf Wars only) -->
+    <div id="health-armor-bar" class="hidden">
+        <div class="ha-container">
+            <!-- Health: + icon | value | vertical line -->
+            <div class="ha-side ha-left">
+                <div class="ha-plus">
+                    <svg viewBox="0 0 24 24" width="49" height="49">
+                        <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                    </svg>
+                </div>
+                <div class="ha-num" id="hp-value">100</div>
+                <div class="ha-vline ha-vline-health" id="hp-vline">
+                    <div class="ha-fill" id="hp-fill"></div>
+                </div>
+            </div>
+
+            <!-- Center separator -->
+            <div class="ha-separator">
+                <div class="ha-sep-dot"></div>
+                <div class="ha-sep-line"></div>
+                <div class="ha-sep-dot"></div>
+            </div>
+
+            <!-- Armor: vertical line | value | shield icon -->
+            <div class="ha-side ha-right">
+                <div class="ha-vline ha-vline-armor" id="armor-vline">
+                    <div class="ha-fill" id="armor-fill"></div>
+                </div>
+                <div class="ha-num" id="armor-value">0</div>
+                <div class="ha-shield">
+                    <svg viewBox="0 0 24 24" width="34" height="34">
+                        <path fill="currentColor" d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Countdown Overlay -->
+    <div id="countdown" class="hidden">
+        <div class="countdown-mode" id="countdown-mode">REDZONE</div>
+        <div class="countdown-number" id="countdown-number">5</div>
+        <div class="countdown-text">GET READY</div>
+        <div class="countdown-pulse"></div>
+    </div>
+
+    <!-- Match End Screen -->
+    <div id="match-end" class="hidden">
+        <div class="end-title" id="end-title">MATCH OVER</div>
+        <div class="end-winner" id="end-winner"></div>
+        <div class="end-scores" id="end-scores"></div>
+        <div class="end-divider"></div>
+        <div class="end-stats" id="end-stats"></div>
+    </div>
+
+    <!-- Kill Feed (top right) -->
+    <div id="kill-feed"></div>
+
+    <!-- Weapon / Ammo HUD (bottom left, docked above Session Stats — only shows when a gun is out) -->
+    <div id="ammo-hud" class="hidden">
+        <div class="ammo-weapon-name" id="ammo-weapon-name">WEAPON</div>
+        <div class="ammo-bar-row">
+            <span class="ammo-count" id="ammo-count">0</span>
+            <div class="ammo-bar-wrap">
+                <div class="ammo-bar-indicator" id="ammo-bar-indicator"></div>
+                <div class="ammo-bar-track">
+                    <div class="ammo-bar-fill" id="ammo-bar-fill"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scoreboard (center, toggle with Z) -->
+    <div id="scoreboard" class="hidden">
+        <div class="sb-header">
+            <div class="sb-header-title">SCOREBOARD</div>
+            <div class="sb-header-mode" id="sb-mode">REDZONE</div>
+        </div>
+        <div class="sb-table-header">
+            <span class="sb-h-rank">ID</span>
+            <span class="sb-h-name">PLAYER</span>
+            <span class="sb-h-kills">K</span>
+            <span class="sb-h-deaths">D</span>
+            <span class="sb-h-ping">PING</span>
+        </div>
+        <div class="sb-table" id="sb-table"></div>
+    </div>
+
+    <!-- Lobby Screen -->
+    <div id="lobby" class="hidden">
+        <div class="lobby-glow"></div>
+        <div class="lobby-title">WAITING FOR PLAYERS</div>
+        <div class="lobby-count" id="lobby-count">0 / 1</div>
+        <div class="lobby-progress">
+            <div class="lobby-progress-bar" id="lobby-progress-bar"></div>
+        </div>
+        <div class="lobby-subtitle">Press E on NPC to join</div>
+    </div>
+
+    <!-- Watermark -->
+    <div id="watermark">
+        <img src="peak.png" alt="SPVP" id="watermark-img">
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

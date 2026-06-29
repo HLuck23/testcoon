@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gun Rotation HUD</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%; height: 100%;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: transparent;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ── GUN ROTATION BADGE (top-CENTER) ── */
+  #rot-badge {
+    position: fixed;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    pointer-events: none;
+  }
+  #rot-badge.visible { display: flex; }
+
+  .badge-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(135deg, rgba(10,10,20,0.88) 0%, rgba(20,10,40,0.88) 100%);
+    border: 1px solid rgba(160, 60, 255, 0.45);
+    border-bottom: 3px solid #a03cff;
+    border-radius: 0px;
+    padding: 8px 18px;
+    box-shadow: 0 4px 24px rgba(160,60,255,0.2), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+
+  .badge-icon {
+    font-size: 16px;
+    opacity: 0.9;
+  }
+
+  .badge-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .badge-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #a03cff;
+    line-height: 1;
+  }
+
+  .badge-weapon {
+    font-size: 14px;
+    font-weight: 600;
+    color: #f0e8ff;
+    line-height: 1.3;
+    text-shadow: 0 0 12px rgba(160,60,255,0.6);
+  }
+
+  .badge-timer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(10,10,20,0.75);
+    border: 1px solid rgba(160,60,255,0.2);
+    border-radius: 0px;
+    padding: 4px 14px;
+  }
+
+  .timer-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #a03cff;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  .timer-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: #e8d8ff;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 2px;
+  }
+
+  .timer-value.warning {
+    color: #ff6b35;
+    animation: timerShake 0.4s ease-in-out infinite;
+  }
+
+  .timer-dot.warning-dot {
+    background: #ff6b35;
+    animation: pulse-red 1s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(160,60,255,0.7); }
+    50%       { opacity: 0.6; box-shadow: 0 0 0 4px rgba(160,60,255,0); }
+  }
+
+  @keyframes pulse-red {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(255,107,53,0.7); }
+    50%       { opacity: 0.5; box-shadow: 0 0 0 5px rgba(255,107,53,0); }
+  }
+
+  @keyframes timerShake {
+    0%   { transform: translateX(0); }
+    20%  { transform: translateX(-3px) rotate(-1deg); }
+    40%  { transform: translateX(3px) rotate(1deg); }
+    60%  { transform: translateX(-2px) rotate(-0.5deg); }
+    80%  { transform: translateX(2px) rotate(0.5deg); }
+    100% { transform: translateX(0); }
+  }
+
+  /* ── KEYBIND HINTS (top-left) ── */
+  #rot-hints {
+    position: fixed;
+    top: 300px;
+    left: 29px;
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    pointer-events: none;
+  }
+  #rot-hints.visible { display: flex; }
+
+  .hint-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, rgba(10,10,20,0.88) 0%, rgba(20,10,40,0.88) 100%);
+    border: 1px solid rgba(160,60,255,0.25);
+    border-left: 3px solid #a03cff;
+    border-radius: 0px;
+    padding: 5px 10px 5px 8px;
+  }
+
+  .hint-key {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #a03cff;
+    background: rgba(160,60,255,0.12);
+    border: 1px solid rgba(160,60,255,0.3);
+    border-radius: 0px;
+    padding: 2px 6px;
+    min-width: 40px;
+    width: 40px;
+    text-align: center;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+  }
+
+  .hint-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: #fff;
+    letter-spacing: 0.3px;
+  }
+</style>
+</head>
+<body>
+
+<!-- GUN ROTATION BADGE (top-center) -->
+<div id="rot-badge">
+  <div class="badge-main">
+    <div class="badge-icon">🔫</div>
+    <div class="badge-text">
+      <span class="badge-label">Gun Rotation</span>
+      <span class="badge-weapon" id="rot-weapon-name">Loading...</span>
+    </div>
+  </div>
+  <div class="badge-timer">
+    <div class="timer-dot" id="timer-dot"></div>
+    <span class="timer-value" id="rot-timer-val">04:00</span>
+  </div>
+</div>
+
+<!-- KEYBIND HINTS (top-left) -->
+<div id="rot-hints">
+  <div class="hint-row">
+    <span class="hint-key">/hub</span>
+    <span class="hint-label">Leave Arena</span>
+  </div>
+  <div class="hint-row">
+    <span class="hint-key">Z</span>
+    <span class="hint-label">Scoreboard</span>
+  </div>
+</div>
+
+<script>
+window.addEventListener('message', (event) => {
+  const data = event.data;
+  if (!data || !data.action) return;
+
+  const badge = document.getElementById('rot-badge');
+  const hints = document.getElementById('rot-hints');
+  const weaponName = document.getElementById('rot-weapon-name');
+  const timerVal = document.getElementById('rot-timer-val');
+  const timerDot = document.getElementById('timer-dot');
+
+  switch (data.action) {
+    case 'showGunRot':
+      badge.classList.add('visible');
+      hints.classList.add('visible');
+      if (data.weaponName) weaponName.textContent = data.weaponName;
+      if (data.timerStr)   timerVal.textContent   = data.timerStr;
+      break;
+
+    case 'hideGunRot':
+      badge.classList.remove('visible');
+      hints.classList.remove('visible');
+      break;
+
+    case 'updateGunRot':
+      if (data.weaponName) weaponName.textContent = data.weaponName;
+      if (data.timerStr) {
+        timerVal.textContent = data.timerStr;
+        const secs = data.secondsLeft || 999;
+        const warn = secs <= 30;
+        timerVal.classList.toggle('warning', warn);
+        timerDot.classList.toggle('warning-dot', warn);
+      }
+      break;
+  }
+});
+</script>
+</body>
+</html>
