@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Turf Wars — Kill Feed</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: transparent;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ── KILL FEED (top-right) ── */
+  #kill-feed {
+    position: fixed;
+    top: 35px;
+    right: 18px;
+    display: none;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  .kill-entry {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, rgba(10,10,20,0.92) 0%, rgba(20,10,40,0.92) 100%);
+    border: 1px solid rgba(160,60,255,0.35);
+    border-right: 3px solid #a03cff;
+    border-radius: 0px;
+    padding: 6px 12px;
+    box-shadow: 0 4px 16px rgba(160,60,255,0.15);
+    animation: killSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), killFadeOut 0.4s ease-in 4.5s forwards;
+    min-width: 220px;
+    justify-content: center;
+  }
+
+  @keyframes killSlideIn {
+    from { opacity: 0; transform: translateX(40px) scale(0.9); }
+    to   { opacity: 1; transform: translateX(0) scale(1); }
+  }
+
+  @keyframes killFadeOut {
+    to { opacity: 0; transform: translateX(20px) scale(0.95); }
+  }
+
+  .kill-killer {
+    font-size: 12px;
+    font-weight: 700;
+    color: #a03cff;
+    text-shadow: 0 0 8px rgba(160,60,255,0.5);
+  }
+
+  .kill-weapon-img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 4px rgba(160,60,255,0.5));
+    flex-shrink: 0;
+  }
+
+  .kill-victim {
+    font-size: 12px;
+    font-weight: 600;
+    color: #ff6b6b;
+    text-shadow: 0 0 8px rgba(255,107,107,0.4);
+  }
+
+  .kill-headshot {
+    font-size: 12px;
+    color: #ff6b35;
+    margin-left: 2px;
+  }
+
+  /* ── SESSION OVERLAY ── */
+  #session-overlay {
+    position: fixed;
+    left: 29px;
+    top: 1027px;
+    width: 259px;
+    height: 28px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, rgba(10,10,20,0.92) 0%, rgba(20,10,40,0.92) 100%);
+    border: 1px solid rgba(160,60,255,0.35);
+    border-left: 3px solid #a03cff;
+    border-right: 3px solid #a03cff;
+    border-radius: 0px;
+    padding: 0 6px;
+    box-shadow: 0 4px 16px rgba(160,60,255,0.15);
+    gap: 4px;
+    pointer-events: none;
+    z-index: 9998;
+  }
+
+  .so-stat {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .so-icon {
+    width: 12px;
+    height: 12px;
+    color: #a03cff;
+    filter: drop-shadow(0 0 3px rgba(160,60,255,0.6));
+    flex-shrink: 0;
+  }
+
+  .so-value {
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 0 6px rgba(160,60,255,0.4);
+    white-space: nowrap;
+  }
+
+  .so-divider {
+    width: 1px;
+    height: 14px;
+    background: linear-gradient(to bottom, transparent, rgba(160,60,255,0.7), transparent);
+    flex-shrink: 0;
+  }
+</style>
+<base target="_blank">
+</head>
+<body>
+
+<!-- KILL FEED -->
+<div id="kill-feed"></div>
+
+<!-- SESSION STATS -->
+<div id="session-overlay">
+  <!-- REAL PC TIME -->
+  <div class="so-stat">
+    <svg class="so-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M12 6v6l4 2"/>
+    </svg>
+    <span class="so-value" id="so-pc-time">12:00 PM</span>
+  </div>
+  <div class="so-divider"></div>
+  <!-- PLAYER COUNT -->
+  <div class="so-stat">
+    <svg class="so-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="8" r="4"/>
+      <path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>
+    </svg>
+    <span class="so-value" id="so-player-count">0</span>
+  </div>
+  <div class="so-divider"></div>
+  <!-- KILLS -->
+  <div class="so-stat">
+    <svg class="so-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M12 2v3m0 14v3M2 12h3m14 0h3"/>
+    </svg>
+    <span class="so-value" id="so-kills">0</span>
+  </div>
+  <div class="so-divider"></div>
+  <!-- DEATHS -->
+  <div class="so-stat">
+    <svg class="so-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 13.5px; height: 13.5px; transform: translateY(1px);">
+      <path d="M12 2C7.5 2 4 5.5 4 9c0 2.5 1.5 4.5 3.5 5.5V18c0 1 1 2 2.5 2h4c1.5 0 2.5-1 2.5-2v-3.5C17.5 13.5 19 11.5 19 9c0-3.5-3.5-7-7-7z"/>
+      <circle cx="9" cy="9" r="1.5" fill="currentColor" stroke="none"/>
+      <circle cx="15" cy="9" r="1.5" fill="currentColor" stroke="none"/>
+      <path d="M12 11l-1 1.5h2L12 11z" fill="currentColor" stroke="none"/>
+      <path d="M9 16h6"/>
+      <path d="M10 16v1.5"/>
+      <path d="M12 16v1.5"/>
+      <path d="M14 16v1.5"/>
+    </svg>
+    <span class="so-value" id="so-deaths">0</span>
+  </div>
+</div>
+
+<script>
+const killFeedEl = document.getElementById("kill-feed");
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function getWeaponImage(category) {
+  return `assets/${category || 'misc'}.png`;
+}
+
+function addKillFeed(killer, victim, category, headshot) {
+  const entry = document.createElement("div");
+  entry.className = "kill-entry";
+  entry.innerHTML = `
+    <span class="kill-killer">${escapeHtml(killer)}</span>
+    <img src="${getWeaponImage(category)}" class="kill-weapon-img" alt="">
+    <span class="kill-victim">${escapeHtml(victim)}</span>
+    ${headshot ? '<span class="kill-headshot">💀</span>' : ''}
+  `;
+  killFeedEl.appendChild(entry);
+  setTimeout(() => {
+    if (entry.parentNode) entry.parentNode.removeChild(entry);
+  }, 5000);
+}
+
+function updateSessionStats(data) {
+  const elCount = document.getElementById("so-player-count");
+  const elKills = document.getElementById("so-kills");
+  const elDeaths = document.getElementById("so-deaths");
+  if (elCount) elCount.textContent = data.playerCount ?? 0;
+  if (elKills) elKills.textContent = data.kills ?? 0;
+  if (elDeaths) elDeaths.textContent = data.deaths ?? 0;
+}
+
+/* ─── REAL LOCAL PC TIME — 12 HOUR NO SECONDS ─── */
+function updatePcTime() {
+  const now = new Date();
+
+  let h = now.getHours();
+  const m = String(now.getMinutes()).padStart(2, '0');
+  const ampm = h >= 12 ? 'PM' : 'AM';
+
+  h = h % 12;
+  h = h ? h : 12;
+
+  const timeString = `${h}:${m} ${ampm}`;
+
+  const el = document.getElementById("so-pc-time");
+  if (el) el.textContent = timeString;
+}
+
+updatePcTime();
+setInterval(updatePcTime, 1000);
+
+window.addEventListener("message", (event) => {
+  const data = event.data;
+  if (!data || !data.type) return;
+
+  switch (data.type) {
+    case "addKillFeed":
+      if (data.killer && data.victim) {
+        addKillFeed(data.killer, data.victim, data.category, data.headshot);
+      }
+      break;
+
+    case "setGameState":
+      const isHub = data.state === "hub";
+      killFeedEl.style.display = isHub ? "none" : "flex";
+      break;
+
+    case "updateSessionStats":
+      updateSessionStats(data);
+      break;
+  }
+});
+</script>
+</body>
+</html>

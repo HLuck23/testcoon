@@ -1,0 +1,2270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PvP Wars</title>
+
+<!-- Same font pairing as pvp-welcome / pvp-turf, so Wars doesn't look
+     like a different server bolted on. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    /* ── SAME PALETTE AS pvp-core / pvp-turf / pvp-welcome ── */
+    --accent:       #a03cff;
+    --accent-glow:  #c98bff;
+    --accent-2:     #4ce8ff;
+    --text-1:       #f5f0ff;
+    --text-2:       rgba(226,232,240,0.68);
+    --text-3:       rgba(226,232,240,0.5);
+    --bg-0:         rgba(8,4,16,0.95);
+    --bg-1:         rgba(14,7,24,0.95);
+    --line:         rgba(160,60,255,0.28);
+    /* Team colors stay distinct from the menu theme on purpose —
+       these identify a SIDE, not the brand. */
+    --alpha:        #a03cff;
+    --bravo:        #ff7070;
+    --gold:         #ffd700;
+    --green:        #5be08a;
+    --red:          #ff5d5d;
+    --font-display: 'Rajdhani', 'Bahnschrift', 'Segoe UI Semibold', system-ui, sans-serif;
+    --font-body:    'Inter', 'Segoe UI', system-ui, sans-serif;
+    --font-mono:    'SF Mono', 'Segoe UI Mono', monospace;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: transparent;
+    overflow: hidden;
+    font-family: var(--font-body);
+    color: var(--text-1);
+    user-select: none;
+  }
+
+  /* ============================================================
+     SHARED PANEL CHROME
+     ============================================================ */
+  .panel-shell {
+    background: linear-gradient(180deg, var(--bg-1) 0%, rgba(10,5,18,0.97) 100%);
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--accent);
+    box-shadow: 0 0 50px rgba(160,60,255,0.10);
+  }
+  .panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 22px; border-bottom: 1px solid var(--line);
+  }
+  .panel-title { display: flex; align-items: center; gap: 12px; }
+  .panel-title-icon { font-size: 20px; filter: drop-shadow(0 0 6px rgba(160,60,255,0.6)); }
+  .panel-title-text {
+    font-family: var(--font-display); font-size: 17px; font-weight: 700;
+    color: var(--text-1); letter-spacing: 3px; text-transform: uppercase;
+  }
+  .panel-title-sub {
+    font-size: 10px; color: var(--accent-glow); letter-spacing: 2px; font-weight: 600;
+    text-transform: uppercase; margin-top: 1px;
+  }
+  .panel-close {
+    background: rgba(160,60,255,0.10); border: 1px solid var(--line); color: var(--accent-glow);
+    font-size: 18px; width: 32px; height: 32px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    transition: all .15s;
+  }
+  .panel-close:hover { background: rgba(160,60,255,0.22); color: var(--text-1); }
+
+  .btn {
+    font-family: var(--font-display); font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; font-size: 12.5px; padding: 11px 20px; border-radius: 7px;
+    border: 1px solid var(--line); cursor: pointer; transition: all .15s; text-align: center;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, rgba(160,60,255,0.32), rgba(76,232,255,0.10));
+    border-color: var(--accent); color: var(--text-1);
+  }
+  .btn-primary:hover { box-shadow: 0 0 18px rgba(160,60,255,0.35); transform: translateY(-1px); }
+  .btn-secondary { background: rgba(255,255,255,0.04); color: var(--text-2); }
+  .btn-secondary:hover { border-color: var(--accent-glow); color: var(--text-1); }
+  .btn-ghost {
+    background: transparent; border: none; color: var(--text-3);
+    font-family: var(--font-body); text-transform: none; letter-spacing: 0; font-weight: 500;
+    font-size: 11.5px; text-decoration: underline; cursor: pointer;
+  }
+  .btn-ghost:hover { color: var(--accent-glow); }
+
+  /* ============================================================
+     KILL FEED  (top-right, wars mode only)
+     ============================================================ */
+  #wars-killfeed {
+    position: fixed; top: 130px; right: 24px;
+    display: none; flex-direction: column; gap: 5px; pointer-events: none; z-index: 10;
+  }
+  #wars-killfeed.visible { display: flex; }
+  .kf-row {
+    display: flex; align-items: center; gap: 8px;
+    background: linear-gradient(135deg, rgba(8,4,16,0.9) 0%, rgba(20,8,32,0.9) 100%);
+    border: 1px solid var(--line); border-right: 3px solid var(--accent);
+    padding: 5px 12px; border-radius: 4px;
+    animation: kfSlideIn 0.2s ease;
+  }
+  @keyframes kfSlideIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
+  .kf-killer { font-size: 12px; font-weight: 700; color: var(--text-1); }
+  .kf-arrow  { font-size: 10px; color: var(--accent-glow); }
+  .kf-victim { font-size: 12px; font-weight: 500; color: var(--text-2); }
+  .kf-hs     { font-size: 9px; color: var(--gold); font-weight: 700; letter-spacing: 1px; margin-left: 4px; }
+
+  /* ============================================================
+     SESSION / WAITING HUD BADGE (top-center)
+     ============================================================ */
+  #wars-badge {
+    position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
+    display: none; flex-direction: column; align-items: center; gap: 4px;
+    pointer-events: none; z-index: 10;
+  }
+  #wars-badge.visible { display: flex; }
+  .wars-badge-main {
+    display: flex; align-items: center; gap: 12px;
+    background: linear-gradient(135deg, rgba(8,4,16,0.94) 0%, rgba(18,7,30,0.94) 100%);
+    border: 1px solid var(--line); border-bottom: 3px solid var(--accent);
+    padding: 8px 20px; border-radius: 4px;
+  }
+  .wars-badge-main.waiting { border-bottom-color: var(--accent-glow); }
+  .wars-team-pill {
+    display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase; padding: 4px 10px; border-radius: 4px;
+  }
+  .wars-team-pill.alpha { background: rgba(160,60,255,0.22); border: 1px solid rgba(160,60,255,0.5); color: var(--alpha); }
+  .wars-team-pill.bravo { background: rgba(220,30,30,0.22); border: 1px solid rgba(255,112,112,0.5); color: var(--bravo); }
+  .wars-team-pill.waiting {
+    background: rgba(160,60,255,0.18); border: 1px solid var(--line); color: var(--accent-glow);
+  }
+  .wars-team-pill.waiting .dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--accent-glow);
+    display: inline-block; animation: pulseDot 1.4s infinite;
+  }
+  @keyframes pulseDot { 0%,100%{ opacity:1; } 50%{ opacity:.3; } }
+  .wars-map-label { font-size: 12px; font-weight: 600; color: var(--text-1); letter-spacing: 1px; }
+  .wars-syringe-hud { display:flex; align-items:center; gap:6px; font-size:11px; color: var(--green); font-weight:600; letter-spacing:1px; }
+  .wars-money-hud { font-size: 11px; color: var(--gold); font-weight: 700; letter-spacing: 1px; }
+
+
+  /* ── KEYBIND HINT PILLS (top-left, matching pvp-turf style) ── */
+  #wars-hints {
+    position: fixed;
+    top: 300px;
+    left: 29px;
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    pointer-events: none;
+    z-index: 10;
+  }
+  #wars-hints.visible { display: flex; }
+  .w-hint-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, rgba(10,10,20,0.88) 0%, rgba(20,10,40,0.88) 100%);
+    border: 1px solid rgba(160,60,255,0.25);
+    border-left: 3px solid #a03cff;
+    border-radius: 0px;
+    padding: 5px 10px 5px 8px;
+  }
+  .w-hint-key {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #a03cff;
+    background: rgba(160,60,255,0.12);
+    border: 1px solid rgba(160,60,255,0.3);
+    border-radius: 0px;
+    padding: 2px 6px;
+    min-width: 40px;
+    text-align: center;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+  }
+  .w-hint-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: #fff;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── SESSION LEADERBOARD (top-right, shifted down to make room
+       for the team panel above it) ── */
+  #wars-leaderboard {
+    position: fixed;
+    top: 140px;
+    right: 24px;
+    display: none;
+    flex-direction: column;
+    gap: 0;
+    min-width: 200px;
+    pointer-events: none;
+    z-index: 10;
+  }
+  #wars-leaderboard.visible { display: flex; }
+  .lb-header {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--accent-glow);
+    text-transform: uppercase;
+    padding: 4px 10px;
+    background: rgba(8,4,16,0.92);
+    border: 1px solid var(--line);
+    border-bottom: none;
+    border-left: 3px solid var(--accent);
+  }
+  .lb-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 3px 10px 3px 12px;
+    background: rgba(8,4,16,0.82);
+    border: 1px solid var(--line);
+    border-top: none;
+    border-left: 3px solid transparent;
+    font-size: 11px;
+    gap: 8px;
+  }
+  .lb-row:first-of-type { border-top: none; }
+  .lb-rank { font-size: 9px; color: var(--text-3); width: 14px; flex-shrink: 0; }
+  .lb-name { color: var(--text-1); font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lb-kills { color: var(--accent-glow); font-weight: 700; font-size: 12px; }
+  .lb-npc   { color: var(--text-3); font-size: 9px; margin-left: 2px; }
+
+  /* ============================================================
+     SIEGE-STYLE TOP-BAR TEAM UI
+     The "box" problem: giving each .op-card its own background
+     creates a solid rectangle even when clipped at the corners.
+     Fix: the angled shape lives on .siege-side::before, a separate
+     pseudo-element with no text in it -- see the comment by
+     .siege-side for the full history (skew+counter-skew blurred
+     text; clip-path polygon() with calc() then failed to render in
+     FXServer's Chromium). Cards render with no transform at all, on
+     top of the pseudo-element's skewed background, fully upright
+     and crisp either way.
+     Dynamic: 1v1 or 5v5, the shape always tapers at both outer ends.
+     ============================================================ */
+  #wars-team-ui {
+    position: fixed;
+    top: 68px; left: 0; right: 0;
+    display: none;
+    justify-content: center;
+    align-items: flex-start;
+    z-index: 10;
+    pointer-events: none;
+  }
+  #wars-team-ui.visible { display: flex; }
+
+  .siege-bar-wrap {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    padding: 0;
+    gap: 4px;
+  }
+
+  /* FIX (text blur): the previous approach skewed .siege-side with
+     transform: skewX(-12deg), then counter-skewed .op-card with
+     transform: skewX(12deg) to cancel it back out so content looked
+     upright. Two opposing transforms stacked like that blur text --
+     it never lands cleanly on the pixel grid even though the NET
+     visual rotation is zero.
+     ATTEMPTED FIX #2 (clip-path: polygon() with calc()): replaced the
+     transform with a clip-path polygon to cut the parallelogram shape
+     directly. This fixed the blur but the calc() inside polygon()
+     doesn't render correctly in FXServer's embedded Chromium build --
+     the clip-path silently fails, leaving the full untrimmed rectangle
+     visible (the "black rect instead of the bent purple shape" report).
+     ACTUAL FIX: go back to transform: skewX() for the shape -- it was
+     never broken, it just needs to live somewhere with NO text in it.
+     .siege-side itself stays untransformed (so its children, the
+     cards, lay out and render normally -- crisp text). A ::before
+     pseudo-element, which can never contain text, gets position:
+     absolute + the skew transform + the background/blur/accent-line,
+     sitting visually behind the cards. Same bent shape as the
+     original design, same crisp text as the clip-path attempt --
+     because the two are now on entirely separate layers instead of
+     fighting over the same one. */
+  .siege-side {
+    display: flex;
+    align-items: stretch;
+    gap: 1px;
+    overflow: visible;
+    position: relative;
+  }
+  .siege-side::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: rgba(10,5,20,0.82);
+    backdrop-filter: blur(10px);
+    transform: skewX(-12deg);
+    /* Forces backdrop-filter to respect the skewed shape instead of
+       bleeding the pre-transform rectangle at the corners -- see the
+       earlier "ghost rectangle" fix; still needed here since the skew
+       is back, just isolated to this text-free pseudo-element now. */
+    clip-path: inset(0);
+  }
+  .siege-side.atk::before { box-shadow: inset 0 -2px 0 var(--alpha); }
+  .siege-side.def::before { box-shadow: inset 0 -2px 0 var(--bravo); }
+
+  /* Center notch */
+  .siege-notch {
+    width: 8px; flex-shrink: 0;
+    background: rgba(160,60,255,0.25);
+    box-shadow: inset 0 -2px 0 rgba(160,60,255,0.5);
+  }
+
+  /* Cards: transparent bg, no transform, stacked above the skewed
+     ::before background via z-index. */
+  .op-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: transparent;
+    position: relative;
+    z-index: 1;
+    transition: opacity 0.25s ease;
+    border-right: 1px solid rgba(255,255,255,0.07);
+  }
+  .op-card:last-child { border-right: none; }
+  .op-card.dead { opacity: 0.42; }
+
+  /* Def side: mirror card direction */
+  .siege-side.def .op-card { flex-direction: row-reverse; }
+  .siege-side.def .op-info  { align-items: flex-end; }
+
+  /* Portrait */
+  .op-portrait {
+    width: 44px; height: 44px; flex-shrink: 0;
+    border-radius: 3px; overflow: hidden;
+    background: rgba(0,0,0,0.5);
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(255,255,255,0.18);
+  }
+  .op-portrait img {
+    width: 100%; height: 100%;
+    object-fit: cover; object-position: top center;
+    display: block; position: absolute; inset: 0;
+    image-rendering: auto;
+  }
+  .op-card.dead .op-portrait img { filter: grayscale(1) brightness(0.3); }
+
+  /* Skull overlay when dead */
+  .op-skull {
+    position: absolute; inset: 0; z-index: 2;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .op-card.dead .op-skull { opacity: 1; }
+
+  /* Initials fallback while headshot registers */
+  .op-portrait-placeholder {
+    font-family: var(--font-display); font-size: 13px; font-weight: 800;
+    letter-spacing: 1px; z-index: 1; line-height: 1;
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, rgba(160,60,255,0.25), rgba(76,232,255,0.15));
+    border-radius: 3px;
+  }
+  .siege-side.atk .op-portrait-placeholder { background: linear-gradient(135deg, rgba(160,60,255,0.35), rgba(76,232,255,0.2)); color: #fff; }
+  .siege-side.def .op-portrait-placeholder { background: linear-gradient(135deg, rgba(220,30,30,0.35), rgba(255,112,112,0.2)); color: #fff; }
+
+  /* Info — no name, just K/D + HP */
+  .op-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+
+  .op-kd {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--text-3); letter-spacing: 0.3px; white-space: nowrap;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  }
+  .op-kd .kd-val { color: var(--text-2); font-weight: 700; }
+
+  .op-hp-wrap {
+    width: 52px; height: 4px;
+    background: rgba(0,0,0,0.5); border-radius: 2px; overflow: hidden;
+  }
+  .op-hp-bar {
+    height: 100%; border-radius: 2px;
+    transition: width 0.4s ease, background 0.4s ease;
+  }
+  .siege-side.atk .op-hp-bar { background: var(--alpha); }
+  .siege-side.def .op-hp-bar { background: var(--bravo); }
+  .op-hp-bar.low { background: var(--red) !important; }
+
+  .op-hp-text {
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--text-2); letter-spacing: 0.3px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  }
+
+  /* ── remove old plain-text hint ── */
+  .wars-key-hint { display: none; }
+
+
+  #team-toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    display: none; padding: 12px 28px; background: rgba(8,4,16,0.95);
+    border-bottom: 3px solid var(--accent); border-radius: 4px;
+    font-family: var(--font-display); font-size: 13px; font-weight: 700; letter-spacing: 2px;
+    color: var(--text-1); z-index: 50; text-transform: uppercase;
+  }
+
+  /* ============================================================
+     ADMIN NOTIFICATION TOAST STACK
+     FIX: was a single fixed element that got overwritten every time
+     a new request came in -- a second ping while the first was still
+     showing silently destroyed the first one. Now a flex-column
+     container that stacks individual cards, each with its own
+     auto-dismiss; older cards shift up as newer ones disappear.
+     ============================================================ */
+  #admin-notification-stack {
+    position: fixed; top: 24px; right: 24px; z-index: 60;
+    display: flex; flex-direction: column; gap: 8px;
+    max-width: 320px; pointer-events: none;
+  }
+  .admin-notif-card {
+    background: linear-gradient(135deg, rgba(8,4,16,0.96), rgba(20,8,32,0.96));
+    border: 1px solid var(--line); border-left: 3px solid var(--accent-glow);
+    border-radius: 6px; padding: 12px 16px; cursor: pointer; pointer-events: auto;
+    animation: admin-notif-in 0.18s ease-out;
+  }
+  .admin-notif-card.leaving { animation: admin-notif-out 0.18s ease-in forwards; }
+  @keyframes admin-notif-in {
+    from { opacity: 0; transform: translateX(24px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes admin-notif-out {
+    from { opacity: 1; transform: translateX(0); }
+    to   { opacity: 0; transform: translateX(24px); }
+  }
+  .notif-text { font-size: 12.5px; font-weight: 600; color: var(--text-1); }
+  .notif-sub { font-size: 9.5px; color: var(--accent-glow); letter-spacing: 1px; margin-top: 4px; text-transform: uppercase; }
+
+  /* ============================================================
+     OVERLAY BASE  (used by map picker / inventory / admin)
+     Matches #wars-weapon-menu's translucency exactly -- that panel
+     is the one confirmed working, this one was a flat near-opaque
+     near-black (0.72 alpha + blur) backdrop that looked like a solid
+     black box instead of a translucent dark tint over the game.
+     ============================================================ */
+  .overlay {
+    position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+    background:
+      radial-gradient(ellipse at top, rgba(160,60,255,0.10) 0%, transparent 55%),
+      linear-gradient(180deg, rgba(10,6,20,0.55) 0%, rgba(8,5,16,0.62) 100%);
+    z-index: 100; pointer-events: auto;
+  }
+  .overlay.open { display: flex; }
+
+  /* ============================================================
+     MAP PICKER  —  the ONLY panel the NPC opens. Deliberately
+     small: a one-line explainer + map cards. Nothing else.
+     ============================================================ */
+  .mp-panel { width: 560px; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; border-radius: 10px; }
+  .mp-intro { padding: 18px 22px 6px; color: var(--text-2); font-size: 13px; line-height: 1.6; }
+  .mp-maps { padding: 14px 22px 20px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+  .map-card {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    background: rgba(255,255,255,0.03); border: 1px solid var(--line); border-radius: 8px;
+    padding: 14px 16px; transition: all .15s;
+  }
+  .map-card:hover { border-color: var(--accent-glow); background: rgba(160,60,255,0.06); }
+  .map-card-name { font-family: var(--font-display); font-weight: 700; font-size: 15px; color: var(--text-1); letter-spacing: 0.5px; }
+  .map-card-desc { font-size: 11.5px; color: var(--text-3); margin-top: 3px; max-width: 320px; }
+  .mp-footer { padding: 0 22px 20px; text-align: center; }
+  .mp-loading { color: var(--text-3); font-size: 12px; text-align: center; padding: 30px 0; }
+
+  /* ============================================================
+     LOADOUT SHOP — see the dedicated "ARSENAL" CSS block further
+     below (ported from pvp-turf) for #wars-weapon-menu and all of
+     its card/grid/modal styling.
+     ============================================================ */
+
+  /* ============================================================
+     INVENTORY  (standalone grid, opened with TAB)
+     ============================================================ */
+  .inv-panel { width: 460px; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; border-radius: 10px; }
+  .inv-body { padding: 18px 22px; overflow-y: auto; }
+  .inv-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 8px;
+  }
+  .inv-slot {
+    aspect-ratio: 1; background: rgba(255,255,255,0.03); border: 1px solid var(--line); border-radius: 8px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    position: relative; padding: 6px;
+  }
+  .inv-slot.usable { cursor: pointer; transition: all .15s; }
+  .inv-slot.usable:hover { border-color: var(--accent-glow); background: rgba(160,60,255,0.10); }
+  .inv-slot.empty { border-style: dashed; opacity: 0.45; }
+  .inv-slot-icon { font-size: 24px; }
+  .inv-slot-qty {
+    position: absolute; bottom: 4px; right: 6px; font-family: var(--font-mono); font-size: 10px;
+    font-weight: 700; color: var(--text-1); background: rgba(0,0,0,0.5); padding: 1px 4px; border-radius: 3px;
+  }
+  .inv-slot-label { font-size: 9px; color: var(--text-3); text-align: center; letter-spacing: 0.3px; }
+  .inv-detail {
+    background: rgba(255,255,255,0.02); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px;
+    margin-top: 8px; font-size: 12px; color: var(--text-2); line-height: 1.5; min-height: 40px;
+  }
+  .inv-detail b { color: var(--text-1); }
+  .inv-hint { font-size: 10px; color: var(--text-3); text-align: center; margin-top: 10px; letter-spacing: 0.4px; }
+
+  /* ============================================================
+     ADMIN PANEL
+     ============================================================ */
+  #admin-panel.overlay { z-index: 110; }
+  .admin-box { width: 880px; max-height: 86vh; display: flex; flex-direction: column; overflow: hidden; border-radius: 10px; }
+  .admin-header { display:flex; align-items:center; justify-content:space-between; padding:16px 22px; border-bottom:1px solid var(--line); }
+  .admin-title { font-family: var(--font-display); font-weight:700; font-size:16px; letter-spacing:2px; text-transform:uppercase; color: var(--text-1); }
+  .admin-close { background: rgba(160,60,255,0.10); border:1px solid var(--line); color: var(--accent-glow); font-size:18px; width:32px; height:32px; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .admin-body { display:grid; grid-template-columns: 230px 1fr; gap: 18px; padding: 18px 22px; overflow-y:auto; }
+  .admin-col-label { font-family: var(--font-display); font-size:10px; letter-spacing:2px; text-transform:uppercase; color: var(--accent-glow); padding: 0 0 10px 2px; }
+  .admin-player-list { display:flex; flex-direction:column; gap:6px; max-height: 220px; overflow-y:auto; }
+  .admin-player-item {
+    display:flex; align-items:center; justify-content:space-between; padding:8px 10px;
+    background: rgba(255,255,255,0.03); border:1px solid var(--line); border-radius:6px; cursor:pointer; font-size:12px;
+  }
+  .admin-player-item.selected { border-color: var(--accent); background: rgba(160,60,255,0.12); }
+  .admin-player-name { color: var(--text-1); font-weight:600; }
+  .admin-player-id { color: var(--text-3); font-size:10px; }
+  .admin-player-team { font-size:9px; padding:2px 6px; border-radius:4px; font-weight:700; letter-spacing:0.5px; }
+  .admin-player-team.alpha { background: rgba(160,60,255,0.18); color: var(--alpha); }
+  .admin-player-team.bravo { background: rgba(255,112,112,0.18); color: var(--bravo); }
+  .admin-waiting-list { display:flex; flex-direction:column; gap:6px; margin-top: 14px; }
+  .admin-waiting-item {
+    display:flex; align-items:center; justify-content:space-between; padding:7px 10px; font-size:11.5px;
+    background: rgba(160,60,255,0.06); border:1px solid var(--line); border-radius:6px; color: var(--text-2);
+  }
+  .admin-waiting-item span.map { color: var(--accent-glow); font-weight:600; }
+  .admin-teams { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px; }
+  .admin-team-box { border:1px solid var(--line); border-radius:8px; padding:12px; min-height:90px; }
+  .admin-team-box.alpha { border-top: 3px solid var(--alpha); }
+  .admin-team-box.bravo { border-top: 3px solid var(--bravo); }
+  .admin-team-title { font-family: var(--font-display); font-size:12px; font-weight:700; letter-spacing:1px; margin-bottom:8px; }
+  .admin-team-title.alpha { color: var(--alpha); }
+  .admin-team-title.bravo { color: var(--bravo); }
+  .admin-team-member { display:flex; align-items:center; justify-content:space-between; padding:6px 8px; background: rgba(255,255,255,0.03); border-radius:5px; margin-bottom:5px; font-size:11.5px; }
+  .admin-remove-btn { background:none; border:none; color: var(--red); cursor:pointer; font-size:13px; }
+  .admin-controls { display:flex; flex-direction:column; gap:16px; }
+  .admin-assign-row, .admin-map-row { display:flex; gap:8px; }
+  select {
+    flex:1; background: rgba(255,255,255,0.04); border:1px solid var(--line); color: var(--text-1);
+    border-radius:6px; padding:9px 10px; font-family: var(--font-body); font-size:12px; outline:none;
+    cursor: pointer;
+  }
+  /* FIX: only the closed/collapsed <select> was styled above -- the
+     OPTION LIST itself (what actually renders when you click it open)
+     was left to Chromium's default styling, which is a plain white
+     background with barely-visible text floating on top of the dark
+     theme. This is exactly what was reported as "hard to view." */
+  select option {
+    background: #14101e;
+    color: var(--text-1);
+    padding: 8px 10px;
+  }
+  select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(160,60,255,0.18);
+  }
+  .btn-alpha { background: rgba(160,60,255,0.18); border:1px solid var(--alpha); color: var(--alpha); }
+  .btn-bravo { background: rgba(255,112,112,0.18); border:1px solid var(--bravo); color: var(--bravo); }
+  .btn-start { background: linear-gradient(135deg, rgba(91,224,138,0.28), rgba(76,232,255,0.10)); border-color: var(--green); color: var(--text-1); }
+  .btn-end { background: rgba(255,93,93,0.14); border-color: var(--red); color: var(--red); }
+  .admin-feedback { padding:9px 12px; border-radius:6px; font-size:11.5px; font-weight:600; }
+  .admin-feedback.ok { background: rgba(91,224,138,0.14); color: var(--green); border:1px solid rgba(91,224,138,0.35); }
+  .admin-feedback.err { background: rgba(255,93,93,0.14); color: var(--red); border:1px solid rgba(255,93,93,0.35); }
+
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-thumb { background: rgba(160,60,255,0.3); border-radius: 4px; }
+
+  /* ============================================================
+     LOADOUT SHOP — ARSENAL  (ported from pvp-turf's arsenal menu,
+     same structure/behavior, re-skinned with Wars's own CSS vars)
+     ============================================================ */
+
+  #wars-weapon-menu {
+    position: fixed;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    background:
+      radial-gradient(ellipse at top, rgba(160,60,255,0.10) 0%, transparent 55%),
+      linear-gradient(180deg, rgba(10,6,20,0.55) 0%, rgba(8,5,16,0.62) 100%);
+    pointer-events: auto;
+    z-index: 90;
+    animation: arsenalFadeIn 0.16s ease-out;
+  }
+
+  @keyframes arsenalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  #wars-weapon-menu.open { display: flex; }
+
+  .arsenal-topbar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px 36px;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(90deg, rgba(160,60,255,0.08) 0%, transparent 60%);
+  }
+
+  .menu-title-group { display: flex; align-items: center; gap: 14px; }
+
+  .menu-icon {
+    width: 42px; height: 42px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), #6014c8);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 16px rgba(160,60,255,0.45);
+    flex-shrink: 0;
+  }
+  .menu-icon img { width: 22px; height: 22px; object-fit: contain; filter: invert(1) brightness(1.1); }
+
+  .menu-title { display: flex; flex-direction: column; }
+  .menu-title-text { font-family: var(--font-display); font-size: 19px; font-weight: 700; color: var(--text-1); letter-spacing: 0.5px; }
+  .menu-subtitle { font-size: 10px; color: var(--accent-glow); letter-spacing: 2px; text-transform: uppercase; font-weight: 600; }
+
+  .arsenal-topbar-right { display: flex; align-items: center; gap: 18px; }
+
+  .balance-pill {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(91,224,138,0.08); border: 1px solid rgba(91,224,138,0.3);
+    border-radius: 10px; padding: 9px 18px;
+  }
+  .balance-label { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(91,224,138,0.7); }
+  .balance-value { font-size: 18px; font-weight: 800; color: var(--green); font-variant-numeric: tabular-nums; letter-spacing: 0.3px; transition: color 0.25s ease; }
+  .balance-value.flash-down { color: var(--red); }
+
+  .menu-close-btn {
+    width: 38px; height: 38px; border-radius: 9px;
+    border: 1px solid var(--line); background: rgba(160,60,255,0.06);
+    color: var(--text-2); font-size: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.12s ease;
+  }
+  .menu-close-btn:hover { background: rgba(160,60,255,0.16); border-color: var(--accent-glow); color: var(--text-1); }
+
+  .arsenal-body { flex: 1; display: flex; min-height: 0; }
+
+  .arsenal-rail {
+    flex-shrink: 0; width: 200px;
+    border-right: 1px solid var(--line);
+    padding: 18px 12px; display: flex; flex-direction: column; gap: 4px;
+    background: rgba(0,0,0,0.18);
+  }
+
+  .menu-tab {
+    display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+    font-size: 12px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+    color: rgba(200,180,255,0.45); cursor: pointer; border: 1px solid transparent;
+    border-radius: 8px; background: none; transition: all 0.14s ease; text-align: left;
+  }
+  .menu-tab:hover  { color: rgba(200,180,255,0.8); background: rgba(160,60,255,0.06); }
+  .menu-tab.active { color: var(--text-1); background: rgba(160,60,255,0.14); border-color: var(--line); }
+
+  .tab-icon-img { width: 16px; height: 16px; object-fit: contain; flex-shrink: 0; filter: invert(1) brightness(0.9); opacity: 0.45; transition: opacity 0.14s ease; }
+  .menu-tab:hover .tab-icon-img  { opacity: 0.8; }
+  .menu-tab.active .tab-icon-img { opacity: 1; filter: invert(1) brightness(1.1) drop-shadow(0 0 3px rgba(160,60,255,0.6)); }
+
+  .arsenal-grid-wrap { flex: 1; overflow-y: auto; padding: 26px 36px 40px; scrollbar-width: thin; scrollbar-color: rgba(160,60,255,0.3) transparent; }
+  .arsenal-grid-wrap::-webkit-scrollbar       { width: 6px; }
+  .arsenal-grid-wrap::-webkit-scrollbar-track { background: transparent; }
+  .arsenal-grid-wrap::-webkit-scrollbar-thumb { background: rgba(160,60,255,0.3); border-radius: 3px; }
+
+  .weapon-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+
+  .weapon-btn {
+    display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 12px;
+    border: 1px solid rgba(160,60,255,0.16);
+    background: linear-gradient(150deg, rgba(20,12,36,0.6) 0%, rgba(12,8,22,0.6) 100%);
+    cursor: pointer; transition: all 0.14s ease; text-align: left; position: relative; overflow: hidden;
+  }
+  .weapon-btn:hover { background: linear-gradient(150deg, rgba(160,60,255,0.14) 0%, rgba(20,12,36,0.7) 100%); border-color: var(--accent-glow); transform: translateY(-1px); }
+  .weapon-btn.active-weapon { background: linear-gradient(150deg, rgba(160,60,255,0.22) 0%, rgba(20,12,36,0.7) 100%); border-color: var(--accent); box-shadow: 0 0 0 1px rgba(160,60,255,0.3), 0 4px 20px rgba(160,60,255,0.2); }
+
+  .weapon-icon-slot { width: 100%; height: 64px; border-radius: 8px; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; position: relative; }
+  .weapon-icon-img { width: 36px; height: 36px; object-fit: contain; filter: invert(1) brightness(1.05) drop-shadow(0 0 4px rgba(160,60,255,0.45)); transition: opacity 0.15s ease, filter 0.15s ease; }
+  .weapon-btn.locked-weapon .weapon-icon-img { opacity: 0.25; filter: invert(1) brightness(0.55) grayscale(1); }
+
+  .lock-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 19px; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.7)); pointer-events: none; }
+
+  .weapon-meta-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .weapon-name { font-size: 13px; font-weight: 600; color: rgba(220,210,240,0.9); letter-spacing: 0.2px; line-height: 1.3; }
+  .weapon-btn.active-weapon .weapon-name { color: var(--text-1); font-weight: 700; }
+  .weapon-btn.locked-weapon .weapon-name { color: #a89cc0; }
+
+  .weapon-active-badge { font-size: 8px; font-weight: 700; letter-spacing: 1.5px; color: var(--accent); background: rgba(160,60,255,0.15); border: 1px solid rgba(160,60,255,0.3); border-radius: 4px; padding: 3px 6px; flex-shrink: 0; }
+  .weapon-price { font-size: 12px; font-weight: 700; color: var(--green); background: rgba(91,224,138,0.1); border: 1px solid rgba(91,224,138,0.28); border-radius: 5px; padding: 3px 8px; flex-shrink: 0; }
+  .weapon-price.unaffordable { color: var(--red); background: rgba(255,93,93,0.1); border-color: rgba(255,93,93,0.3); }
+
+  .cat-empty-hint { grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: rgba(160,60,255,0.4); font-size: 12px; letter-spacing: 0.5px; }
+
+  .arsenal-footer { flex-shrink: 0; padding: 12px 36px; border-top: 1px solid rgba(160,60,255,0.12); background: rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: space-between; }
+  .footer-hint   { font-size: 10px; color: rgba(200,180,255,0.35); letter-spacing: 0.5px; }
+  .footer-status { font-size: 10px; color: var(--accent-glow); font-weight: 600; letter-spacing: 0.5px; }
+
+  /* ── PURCHASE CONFIRM MODAL (Wars) ── */
+  #wars-confirm-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.55); z-index: 200; }
+  #wars-confirm-modal.open { display: flex; }
+  #wars-generic-confirm-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.55); z-index: 210; }
+  #wars-generic-confirm-modal.open { display: flex; }
+
+  .confirm-card {
+    width: 360px; border-radius: 14px;
+    background: linear-gradient(165deg, rgba(20,12,36,0.97) 0%, rgba(10,6,18,0.98) 100%);
+    border: 1px solid var(--line); box-shadow: 0 16px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(160,60,255,0.12);
+    animation: confirmPopIn 0.16s cubic-bezier(0.34, 1.56, 0.64, 1); overflow: hidden;
+  }
+  @keyframes confirmPopIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+
+  .confirm-header { padding: 20px 22px 14px; border-bottom: 1px solid rgba(160,60,255,0.15); }
+  .confirm-label { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent-glow); margin-bottom: 6px; }
+  .confirm-weapon-name { font-size: 18px; font-weight: 700; color: var(--text-1); }
+
+  .confirm-body { padding: 16px 22px; display: flex; flex-direction: column; gap: 10px; }
+  .confirm-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; }
+  .confirm-row-label { color: rgba(200,180,255,0.55); letter-spacing: 0.3px; }
+  .confirm-row-value { font-weight: 700; color: var(--text-1); font-variant-numeric: tabular-nums; }
+  .confirm-row-value.price   { color: var(--green); }
+  .confirm-row-value.deficit { color: var(--red); }
+
+  .confirm-divider { height: 1px; background: rgba(160,60,255,0.12); margin: 2px 0; }
+  .confirm-warning { font-size: 11px; color: var(--red); background: rgba(255,93,93,0.08); border: 1px solid rgba(255,93,93,0.25); border-radius: 6px; padding: 8px 10px; line-height: 1.4; }
+
+  .confirm-actions { display: flex; gap: 10px; padding: 16px 22px 20px; }
+  .confirm-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; padding: 12px; border-radius: 9px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1px solid transparent; transition: all 0.12s ease; letter-spacing: 0.3px; }
+  .confirm-btn-cancel { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: rgba(220,210,240,0.7); }
+  .confirm-btn-cancel:hover { background: rgba(255,255,255,0.08); color: var(--text-1); }
+  .confirm-btn-confirm { background: linear-gradient(135deg, #2fbd7a, #1a8a55); color: #ffffff; box-shadow: 0 2px 14px rgba(91,224,138,0.25); }
+  .confirm-btn-confirm:hover { box-shadow: 0 2px 20px rgba(91,224,138,0.4); transform: translateY(-1px); }
+  .confirm-btn-confirm:disabled, .confirm-btn-confirm.disabled { background: linear-gradient(135deg, #555, #333); box-shadow: none; cursor: not-allowed; opacity: 0.6; }
+  .confirm-btn-icon { font-size: 14px; }
+
+  /* ── ITEMS tab (syringe etc.) — same card chrome, no lock state ── */
+  .weapon-btn.item-card .weapon-icon-img { filter: invert(1) brightness(1.05) drop-shadow(0 0 4px rgba(91,224,138,0.45)); opacity: 1; }
+  .item-qty-badge { font-size: 8px; font-weight: 700; letter-spacing: 1px; color: var(--accent-glow); background: rgba(160,60,255,0.15); border: 1px solid rgba(160,60,255,0.3); border-radius: 4px; padding: 3px 6px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<!-- KILL FEED (wars mode) -->
+<div id="wars-killfeed"></div>
+
+<!-- KEYBIND HINT PILLS (top-left, matching pvp-turf style) -->
+<div id="wars-hints">
+  <div class="w-hint-row">
+    <span class="w-hint-key">G</span>
+    <span class="w-hint-label">Syringe</span>
+  </div>
+  <div class="w-hint-row">
+    <span class="w-hint-key">TAB</span>
+    <span class="w-hint-label">Inventory</span>
+  </div>
+  <div class="w-hint-row">
+    <span class="w-hint-key">F4</span>
+    <span class="w-hint-label">Shop</span>
+  </div>
+  <div class="w-hint-row">
+    <span class="w-hint-key">/hub</span>
+    <span class="w-hint-label">Leave Arena</span>
+  </div>
+  <div class="w-hint-row" id="wars-hint-admin" style="display:none;">
+    <span class="w-hint-key">/warAdmin</span>
+    <span class="w-hint-label">Ping Admin</span>
+  </div>
+</div>
+
+<!-- SIEGE-STYLE TOP-BAR TEAM UI -->
+<div id="wars-team-ui">
+  <div class="siege-bar-wrap">
+    <!-- Left = your team (atk colors) -->
+    <div class="siege-side atk" id="siege-side-atk"></div>
+    <!-- Center notch -->
+    <div class="siege-notch"></div>
+    <!-- Right = enemy team (def colors) -->
+    <div class="siege-side def" id="siege-side-def"></div>
+  </div>
+</div>
+<!-- SESSION LEADERBOARD — shifted to avoid overlap with top-bar team UI -->
+<div id="wars-leaderboard">
+  <div class="lb-header">SESSION KILLS</div>
+</div>
+
+<!-- HUD BADGE (waiting or active session) -->
+<div id="wars-badge">
+  <div class="wars-badge-main" id="hud-badge-main">
+    <div class="wars-team-pill" id="hud-team-pill">TEAM 1</div>
+    <div class="wars-map-label" id="hud-map-label">WARS</div>
+    <div class="wars-syringe-hud">💉 <span id="hud-syringe">3</span></div>
+    <div class="wars-money-hud">$<span id="hud-money">0</span></div>
+  </div>
+  <div class="wars-key-hint" id="hud-key-hint">[ G ] SYRINGE · [ TAB ] INVENTORY · [ F4 ] SHOP · /HUB TO LEAVE</div>
+</div>
+
+<!-- TEAM ASSIGNED TOAST -->
+<div id="team-toast"></div>
+
+<!-- ADMIN NOTIFICATION STACK -->
+<div id="admin-notification-stack"></div>
+
+<!-- ============================================================
+     MAP PICKER  —  opened by the NPC. This is intentionally small:
+     a short explainer + map cards. Everything else (shop,
+     inventory, admin) lives behind its own hotkey instead.
+     ============================================================ -->
+<div class="overlay" id="wars-mappicker">
+  <div class="panel-shell mp-panel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span class="panel-title-icon">⚔️</span>
+        <div>
+          <div class="panel-title-text">WARS</div>
+          <div class="panel-title-sub">Pick a map to deploy</div>
+        </div>
+      </div>
+      <div class="panel-close" onclick="closeMapPicker()">✕</div>
+    </div>
+    <div class="mp-intro">
+      5v5 admin-managed Team Deathmatch. Pick a map below and you'll deploy there right away —
+      hang out, gear up, and scrap with whoever else shows up while an admin builds the two teams
+      and starts the real match. <b style="color:var(--text-1)">Admins are pinged automatically</b> the moment you deploy.
+    </div>
+    <div class="mp-maps" id="mp-map-list">
+      <div class="mp-loading">Loading maps…</div>
+    </div>
+    <div class="mp-footer">
+      <span class="btn-ghost" onclick="requestAdminFromPicker()">Need an admin right now instead? Ping them directly →</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     LOADOUT SHOP  —  [F4]
+     ============================================================ -->
+<!-- ============================================================
+     LOADOUT SHOP  —  turf-style arsenal layout, war-themed.
+     [F4] to toggle. Categories: Pistols / SMGs / Rifles / Misc
+     (weapons, same as turf) + Items (Wars-only consumables, e.g.
+     syringes — turf has no equivalent of this tab).
+     ============================================================ -->
+<div id="wars-weapon-menu">
+  <div class="arsenal-topbar">
+    <div class="menu-title-group">
+      <div class="menu-icon"><img src="assets/pistols.png" alt=""></div>
+      <div class="menu-title">
+        <span class="menu-title-text">Shop</span>
+        <span class="menu-subtitle">Wars Cash Only</span>
+      </div>
+    </div>
+    <div class="arsenal-topbar-right">
+      <div class="balance-pill">
+        <span class="balance-label">Cash</span>
+        <span class="balance-value" id="wars-balance-value">$0</span>
+      </div>
+      <button class="menu-close-btn" id="wars-arsenal-close-btn" title="Close (F4)">✕</button>
+    </div>
+  </div>
+
+  <div class="arsenal-body">
+    <div class="arsenal-rail">
+      <button class="menu-tab active" data-cat="pistols"><img class="tab-icon-img" src="assets/pistols.png" alt="">Pistols</button>
+      <button class="menu-tab" data-cat="smg"><img class="tab-icon-img" src="assets/smg.png" alt="">SMG</button>
+      <button class="menu-tab" data-cat="rifles"><img class="tab-icon-img" src="assets/rifles.png" alt="">Rifles</button>
+      <button class="menu-tab" data-cat="misc"><img class="tab-icon-img" src="assets/misc.png" alt="">Misc</button>
+    </div>
+
+    <div class="arsenal-grid-wrap">
+      <div class="weapon-list" id="wars-weapon-list"></div>
+    </div>
+  </div>
+
+  <div class="arsenal-footer">
+    <span class="footer-hint">Click a weapon to equip it &middot; click a locked weapon to buy it</span>
+    <span class="footer-status" id="wars-footer-status">READY</span>
+  </div>
+</div>
+
+<!-- PURCHASE CONFIRM MODAL (Wars) -->
+<div id="wars-confirm-modal">
+  <div class="confirm-card">
+    <div class="confirm-header">
+      <div class="confirm-label">Confirm Purchase</div>
+      <div class="confirm-weapon-name" id="wars-confirm-name">—</div>
+    </div>
+    <div class="confirm-body">
+      <div class="confirm-row">
+        <span class="confirm-row-label">Price</span>
+        <span class="confirm-row-value price" id="wars-confirm-price">$0</span>
+      </div>
+      <div class="confirm-row">
+        <span class="confirm-row-label">Your balance</span>
+        <span class="confirm-row-value" id="wars-confirm-balance">$0</span>
+      </div>
+      <div class="confirm-divider"></div>
+      <div class="confirm-row">
+        <span class="confirm-row-label">Balance after</span>
+        <span class="confirm-row-value" id="wars-confirm-after">$0</span>
+      </div>
+      <div class="confirm-warning" id="wars-confirm-warning" style="display:none;">
+        Not enough cash for this yet.
+      </div>
+    </div>
+    <div class="confirm-actions">
+      <button class="confirm-btn confirm-btn-cancel" id="wars-confirm-cancel-btn">
+        <span class="confirm-btn-icon">✕</span> Cancel
+      </button>
+      <button class="confirm-btn confirm-btn-confirm" id="wars-confirm-buy-btn">
+        <span class="confirm-btn-icon">✓</span> Buy
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     GENERIC CONFIRM MODAL
+     FIX: this replaces window.confirm(), which is a REAL native
+     browser dialog -- FXServer's NUI is an actual Chromium frame, so
+     confirm()/alert()/prompt() pop a separate OS-level window outside
+     the game entirely ("JavaScript Confirm - http-pvp-wars"). Used for
+     any yes/no admin action that needs confirmation (currently just
+     End Session) instead of a one-off purpose-built modal each time.
+     ============================================================ -->
+<div id="wars-generic-confirm-modal">
+  <div class="confirm-card">
+    <div class="confirm-header">
+      <div class="confirm-label" id="wars-generic-confirm-label">Confirm</div>
+    </div>
+    <div class="confirm-body">
+      <div class="confirm-row" style="justify-content:center; text-align:center;">
+        <span class="confirm-row-label" id="wars-generic-confirm-message" style="font-size:13px;">Are you sure?</span>
+      </div>
+    </div>
+    <div class="confirm-actions">
+      <button class="confirm-btn confirm-btn-cancel" id="wars-generic-confirm-cancel-btn">
+        <span class="confirm-btn-icon">✕</span> Cancel
+      </button>
+      <button class="confirm-btn confirm-btn-confirm" id="wars-generic-confirm-ok-btn">
+        <span class="confirm-btn-icon">✓</span> Confirm
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     FULL INVENTORY  —  [TAB], data-driven grid
+     ============================================================ -->
+<div class="overlay" id="wars-inventory">
+  <div class="panel-shell inv-panel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span class="panel-title-icon">🎒</span>
+        <div>
+          <div class="panel-title-text">Inventory</div>
+          <div class="panel-title-sub">Wars</div>
+        </div>
+      </div>
+      <div class="panel-close" onclick="closeInventory()">✕</div>
+    </div>
+    <div class="inv-body">
+      <div class="inv-grid" id="inv-grid"></div>
+      <div class="inv-detail" id="inv-detail">Click an item to see what it does.</div>
+      <div class="inv-hint">[ G ] quick-use syringe in the field · [ F4 ] loadout shop</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     ADMIN PANEL
+     ============================================================ -->
+<div class="overlay" id="admin-panel">
+  <div class="panel-shell admin-box">
+    <div class="admin-header">
+      <div class="admin-title">⚔️ WARS Panel</div>
+      <div class="admin-close" onclick="closeAdminPanel()">✕</div>
+    </div>
+    <div class="admin-body">
+      <!-- Left: player list + waiting list -->
+      <div class="admin-players">
+        <div class="admin-col-label">Online Players</div>
+        <div class="admin-player-list" id="admin-player-list"></div>
+        <div class="admin-col-label" style="margin-top:16px;">Waiting On A Map (no team yet)</div>
+        <div class="admin-waiting-list" id="admin-waiting-list"></div>
+      </div>
+      <!-- Right: controls -->
+      <div class="admin-right">
+        <!-- Team display -->
+        <div class="admin-teams">
+          <div class="admin-team-box alpha">
+            <div class="admin-team-title alpha">🔵 Team 1 <span id="alpha-count">(0/5)</span></div>
+            <div id="admin-alpha-list"></div>
+          </div>
+          <div class="admin-team-box bravo">
+            <div class="admin-team-title bravo">🔴 Team 2 <span id="bravo-count">(0/5)</span></div>
+            <div id="admin-bravo-list"></div>
+          </div>
+        </div>
+        <!-- Controls -->
+        <div class="admin-controls">
+          <div>
+            <div class="admin-col-label" style="padding:0 0 8px 0;">Assign Selected Player</div>
+            <div class="admin-assign-row">
+              <select id="admin-player-select">
+                <option value="">-- Select player --</option>
+              </select>
+              <button class="btn btn-alpha" onclick="assignTeam('alpha')">→ Team 1</button>
+              <button class="btn btn-bravo" onclick="assignTeam('bravo')">→ Team 2</button>
+            </div>
+          </div>
+          <div>
+            <div class="admin-col-label" style="padding:0 0 8px 0;">Map</div>
+            <div class="admin-map-row">
+              <select id="admin-map-select">
+                <option value="">-- Select map --</option>
+              </select>
+              <button class="btn btn-secondary" onclick="setMap()">SET MAP</button>
+            </div>
+          </div>
+          <div id="admin-feedback-box"></div>
+          <button class="btn btn-start" onclick="startSession()">▶ START SESSION</button>
+          <button class="btn btn-end" onclick="endSession()">■ END SESSION</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+let sessionActive   = false;
+let currentMoney    = 0;
+let syringeCount    = 0;
+let ownedWeapons    = {};
+let activeLoadout   = null;
+// FIX: separate from activeLoadout (which is just the server's
+// recorded "last selected" loadout, and can go stale across hub
+// trips). This reflects what GetCurrentPedWeapon actually reports in
+// Lua right now -- the real source of truth for the "EQUIPPED" badge.
+// null means "we haven't heard from the client yet" (treat as unknown,
+// don't badge anything) vs the string "" meaning "confirmed holding
+// something not in the loadout list" -- both render as no badge, but
+// kept distinct in case future debugging needs to tell them apart.
+let realEquippedWeapon = null;
+let shopWeapons     = [];
+let adminAllPlayers = [];
+let adminAlpha      = [];
+let adminBravo      = [];
+
+// FIX: separate from adminAlpha/adminBravo above (those are the ADMIN
+// PANEL's own roster data, only populated while that panel is open).
+// This is the player-facing Siege-style team UI's data, populated by
+// the same rosterSync broadcast everyone in the session receives
+// regardless of whether they have any panel open at all.
+let teamUiAlpha = []; // [{ id, name, alive }]
+let teamUiBravo = [];
+let myTeamSide  = null; // "alpha" | "bravo" -- set from sessionStart/teamAssigned
+let adminWaiting    = [];
+let adminMaps       = [];
+let adminMapsForPicker = [];
+let selectedAdminPlayer = null;
+
+// Loadout Shop (ported turf-style arsenal) state
+let warsCurrentCat     = "pistols";
+let shopSyringeCount   = 0;
+let shopSyringePrice   = 350;
+let shopSyringeMax     = 6;
+let warsPendingPurchase = null; // { kind: 'weapon'|'syringe', hash, name, price }
+
+// FIX: internal team keys stay "alpha"/"bravo" everywhere (server
+// SESSION.teams.alpha/.bravo, CSS classes, color variables) since
+// renaming those touches dozens of places across client+server for a
+// purely cosmetic change. This is the ONE place that maps them to the
+// player-facing names -- every display string should go through this
+// instead of calling .toUpperCase() directly on the raw team key.
+const TEAM_DISPLAY_NAME = { alpha: 'TEAM 1', bravo: 'TEAM 2' };
+function teamDisplayName(team) {
+  return TEAM_DISPLAY_NAME[team] || (team || '').toUpperCase();
+}
+
+const WEAPON_PRICES = {
+  // Pistols (nail gun moved here)
+  weapon_glock17s:1800, weapon_glock30:2200, weapon_glock34:2700, weapon_nbk:3200,
+  weapon_revolver357:3900, weapon_glock18dt:5000, weapon_blackiceglock:5800,
+  WEAPON_ICEDGLOCK:6600, weapon_iceglock:7400, weapon_nailgun:2500,
+  // SMGs (junker / hotshotwelder / icedbongshot moved here from misc)
+  weapon_cx9:8500, w_sb_minismg:9200, weapon_dssmg:10000, weapon_asm1:10800,
+  weapon_mp40type2:11600, weapon_r99:12400, weapon_p90:13200, weapon_tbsvector:14000,
+  weapon_icevector:14800, weapon_blastxspectre:15600, weapon_candymp5:16400,
+  weapon_crimsonsnowvector:17200, weapon_blackicemp7:18000, weapon_vesperhybrid:18500,
+  WEAPON_ICEDP90:19000, weapon_spaceflightmp5:19500,
+  weapon_junker:4200, weapon_hotshotwelder:6800, WEAPON_ICEDBONGSHOT:11000,
+  // Rifles
+  weapon_minicarbine:12000, weapon_ibak:14000, weapon_acrcqb:16500, weapon_vss:19000,
+  weapon_retrom4a4:21500, weapon_m4hyperbeast:24000, weapon_m4a1sgyspunkred:26500,
+  WEAPON_ICEDMZA:28500, WEAPON_ICEDQP12:30000, WEAPON_ICEDFAL:31000,
+  WEAPON_KURONAMIVANDAL:31500, WEAPON_ICEDR4C:32000,
+};
+
+function getPrice(hash) {
+  if (WEAPON_PRICES[hash]) return WEAPON_PRICES[hash];
+  for (const [k, v] of Object.entries(WEAPON_PRICES)) {
+    if (k.toLowerCase() === hash.toLowerCase()) return v;
+  }
+  return 5000;
+}
+
+function formatMoney(n) { return n.toLocaleString(); }
+
+function weaponDisplayName(hash) {
+  return hash.replace(/^(WEAPON_|weapon_)/i, '').replace(/_/g, ' ').toUpperCase();
+}
+
+function getCategory(hash) {
+  const h = hash.toLowerCase();
+  if (['weapon_glock17s','weapon_glock30','weapon_glock34','weapon_nbk',
+       'weapon_revolver357','weapon_glock18dt','weapon_blackiceglock',
+       'weapon_icedglock','weapon_iceglock','weapon_nailgun'].some(x => x === h)) return 'pistols';
+  if (['w_sb_minismg','weapon_cx9','weapon_dssmg','weapon_asm1','weapon_mp40type2',
+       'weapon_r99','weapon_p90','weapon_tbsvector','weapon_icevector',
+       'weapon_blastxspectre','weapon_candymp5','weapon_crimsonsnowvector',
+       'weapon_blackicemp7','weapon_vesperhybrid','weapon_icedp90',
+       'weapon_spaceflightmp5','weapon_junker','weapon_hotshotwelder',
+       'weapon_icedbongshot'].some(x => x === h)) return 'smg';
+  if (['weapon_minicarbine','weapon_ibak','weapon_acrcqb','weapon_vss',
+       'weapon_retrom4a4','weapon_m4hyperbeast','weapon_m4a1sgyspunkred',
+       'weapon_icedmza','weapon_icedqp12','weapon_icedfal',
+       'weapon_kuronamivandal','weapon_icedr4c'].some(x => x === h)) return 'rifles';
+  return 'misc';
+}
+
+const CAT_IMAGES = { pistols: "assets/pistols.png", smg: "assets/smg.png", rifles: "assets/rifles.png", misc: "assets/misc.png", items: "assets/misc.png" };
+
+// ============================================================
+// MAP PICKER
+// ============================================================
+function renderMapPicker(maps) {
+  adminMapsForPicker = maps || [];
+  const list = document.getElementById('mp-map-list');
+  if (!maps || !maps.length) {
+    list.innerHTML = '<div class="mp-loading">No maps configured.</div>';
+    return;
+  }
+  list.innerHTML = maps.map(m => `
+    <div class="map-card">
+      <div>
+        <div class="map-card-name">${m.name}</div>
+        <div class="map-card-desc">${m.desc}</div>
+      </div>
+      <button class="btn btn-primary" onclick="deployToMap(${m.index})">DEPLOY</button>
+    </div>`).join('');
+}
+
+function deployToMap(mapIndex) {
+  fetch('https://pvp-wars/mapPickerDeploy', { method:'POST', body:JSON.stringify({ mapIndex }) });
+}
+
+function requestAdminFromPicker() {
+  fetch('https://pvp-wars/mapPickerRequestAdmin', { method:'POST', body:JSON.stringify({}) });
+  closeMapPicker();
+}
+
+function closeMapPicker() {
+  fetch('https://pvp-wars/mapPickerClose', { method:'POST', body:JSON.stringify({}) });
+  document.getElementById('wars-mappicker').classList.remove('open');
+}
+
+// ============================================================
+// LOADOUT SHOP  (ported turf-style arsenal: category rail,
+// image weapon cards, lock/equip states, purchase confirm modal,
+// plus a Wars-only "Items" tab for syringes)
+// ============================================================
+
+const warsMenuEl     = document.getElementById('wars-weapon-menu');
+const warsListEl     = document.getElementById('wars-weapon-list');
+const warsBalanceEl  = document.getElementById('wars-balance-value');
+const warsFooterStatusEl = document.getElementById('wars-footer-status');
+
+const warsConfirmModalEl   = document.getElementById('wars-confirm-modal');
+const warsConfirmNameEl    = document.getElementById('wars-confirm-name');
+const warsConfirmPriceEl   = document.getElementById('wars-confirm-price');
+const warsConfirmBalanceEl = document.getElementById('wars-confirm-balance');
+const warsConfirmAfterEl   = document.getElementById('wars-confirm-after');
+const warsConfirmWarningEl = document.getElementById('wars-confirm-warning');
+const warsConfirmCancelBtn = document.getElementById('wars-confirm-cancel-btn');
+const warsConfirmBuyBtn    = document.getElementById('wars-confirm-buy-btn');
+
+function closeShop() {
+  fetch('https://pvp-wars/warsCloseShop', { method:'POST', body:JSON.stringify({}) });
+  warsMenuEl.classList.remove('open');
+}
+
+function updateWarsBalancePill() {
+  warsBalanceEl.textContent = '$' + formatMoney(currentMoney);
+}
+
+function isWeaponOwned(hash) {
+  return !!ownedWeapons[hash] || Object.keys(ownedWeapons).some(k => k.toLowerCase() === hash.toLowerCase());
+}
+
+function renderShop() {
+  updateWarsBalancePill();
+
+  const guns = shopWeapons.filter(w => getCategory(w) === warsCurrentCat);
+  warsListEl.innerHTML = '';
+
+  // Misc tab also carries the Wars-only consumable (syringe) — there's
+  // no separate "Items" tab anymore, it lives here instead.
+  if (!guns.length && warsCurrentCat !== 'misc') {
+    warsListEl.innerHTML = '<div class="cat-empty-hint">Nothing here yet.</div>';
+    return;
+  }
+
+  guns.forEach(hash => {
+    const owned     = isWeaponOwned(hash);
+    const price     = getPrice(hash);
+    // FIX: was activeLoadout (server's recorded selection, can go
+    // stale across hub trips). realEquippedWeapon reflects what's
+    // actually in the player's hands right now.
+    const isEquip   = realEquippedWeapon && realEquippedWeapon.toLowerCase() === hash.toLowerCase();
+    const canAfford = currentMoney >= price;
+
+    const btn = document.createElement('button');
+    btn.className = 'weapon-btn'
+      + (isEquip ? ' active-weapon' : '')
+      + (owned ? '' : ' locked-weapon');
+
+    let badgeHtml = '';
+    if (isEquip) {
+      badgeHtml = '<span class="weapon-active-badge">EQUIPPED</span>';
+    } else if (!owned) {
+      badgeHtml = `<span class="weapon-price${canAfford ? '' : ' unaffordable'}">${'$' + formatMoney(price)}</span>`;
+    }
+    // owned + not equipped = clean card, no badge needed
+
+    btn.innerHTML = `
+      <div class="weapon-icon-slot">
+        <img src="${CAT_IMAGES[warsCurrentCat] || CAT_IMAGES.misc}" class="weapon-icon-img" alt="">
+        ${owned ? '' : '<span class="lock-overlay">🔒</span>'}
+      </div>
+      <div class="weapon-meta-row">
+        <span class="weapon-name">${weaponDisplayName(hash)}</span>
+        ${badgeHtml}
+      </div>
+    `;
+    btn.addEventListener('click', () => onWeaponCardClick(hash, owned, price));
+    warsListEl.appendChild(btn);
+  });
+
+  if (warsCurrentCat === 'misc') {
+    appendSyringeCard();
+  }
+}
+
+function appendSyringeCard() {
+  const canAfford = currentMoney >= shopSyringePrice;
+  const atMax = shopSyringeCount >= shopSyringeMax;
+
+  const btn = document.createElement('button');
+  btn.className = 'weapon-btn item-card' + ((!canAfford && !atMax) ? ' locked-weapon' : '');
+
+  let badgeHtml;
+  if (atMax) {
+    badgeHtml = '<span class="item-qty-badge">MAX OWNED</span>';
+  } else {
+    badgeHtml = `<span class="weapon-price${canAfford ? '' : ' unaffordable'}">${'$' + formatMoney(shopSyringePrice)}</span>`;
+  }
+
+  btn.innerHTML = `
+    <div class="weapon-icon-slot">
+      <img src="${CAT_IMAGES.items}" class="weapon-icon-img" alt="">
+    </div>
+    <div class="weapon-meta-row">
+      <span class="weapon-name">Syringe <span class="item-qty-badge">${shopSyringeCount}/${shopSyringeMax}</span></span>
+      ${badgeHtml}
+    </div>
+  `;
+  if (!atMax) {
+    btn.addEventListener('click', () => onItemCardClick(canAfford));
+  }
+  warsListEl.appendChild(btn);
+}
+
+function onWeaponCardClick(hash, owned, price) {
+  if (owned) {
+    equipWarsWeapon(hash);
+  } else {
+    openWarsConfirmModal({ kind: 'weapon', hash, name: weaponDisplayName(hash), price });
+  }
+}
+
+function onItemCardClick(canAfford) {
+  if (!canAfford) return;
+  openWarsConfirmModal({ kind: 'syringe', hash: 'wars_syringe', name: 'Syringe', price: shopSyringePrice });
+}
+
+function equipWarsWeapon(hash) {
+  // FIX: this set activeLoadout (now unused by the badge -- see
+  // renderShop's isEquip check) but never updated realEquippedWeapon,
+  // which is what the EQUIPPED badge actually reads since last
+  // round's fix. Click did nothing visible until the panel was
+  // reopened and re-resolved real game state from scratch. Updating
+  // realEquippedWeapon here too gives the same instant feedback
+  // pvp-turf's equipWeapon already has.
+  activeLoadout = hash;
+  realEquippedWeapon = hash;
+  warsFooterStatusEl.textContent = weaponDisplayName(hash);
+  fetch('https://pvp-wars/warsSetLoadout', { method:'POST', body:JSON.stringify({ weapon: hash }) });
+  renderShop();
+}
+
+// ── PURCHASE CONFIRM MODAL ──
+
+function openWarsConfirmModal(purchase) {
+  warsPendingPurchase = purchase;
+  const after = currentMoney - purchase.price;
+  const canAfford = after >= 0;
+
+  warsConfirmNameEl.textContent    = purchase.name;
+  warsConfirmPriceEl.textContent   = '$' + formatMoney(purchase.price);
+  warsConfirmBalanceEl.textContent = '$' + formatMoney(currentMoney);
+  warsConfirmAfterEl.textContent   = canAfford ? '$' + formatMoney(after) : '$0';
+  warsConfirmAfterEl.classList.toggle('deficit', !canAfford);
+  warsConfirmWarningEl.style.display = canAfford ? 'none' : 'block';
+  warsConfirmBuyBtn.classList.toggle('disabled', !canAfford);
+  warsConfirmBuyBtn.disabled = !canAfford;
+
+  warsConfirmModalEl.classList.add('open');
+}
+
+function closeWarsConfirmModal() {
+  warsConfirmModalEl.classList.remove('open');
+  warsPendingPurchase = null;
+}
+
+warsConfirmCancelBtn.addEventListener('click', closeWarsConfirmModal);
+
+warsConfirmModalEl.addEventListener('click', (e) => {
+  if (e.target === warsConfirmModalEl) closeWarsConfirmModal();
+});
+
+warsConfirmBuyBtn.addEventListener('click', () => {
+  if (!warsPendingPurchase || warsConfirmBuyBtn.disabled) return;
+  const { kind, hash, name } = warsPendingPurchase;
+  warsFooterStatusEl.textContent = `BUYING ${name.toUpperCase()}...`;
+
+  if (kind === 'syringe') {
+    fetch('https://pvp-wars/warsBuySyringe', { method:'POST', body:JSON.stringify({}) });
+  } else {
+    fetch('https://pvp-wars/warsPurchaseWeapon', { method:'POST', body:JSON.stringify({ weapon: hash }) });
+  }
+  closeWarsConfirmModal();
+});
+
+document.querySelectorAll('#wars-weapon-menu .menu-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('#wars-weapon-menu .menu-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    warsCurrentCat = tab.dataset.cat;
+    renderShop();
+  });
+});
+
+document.getElementById('wars-arsenal-close-btn').addEventListener('click', closeShop);
+
+// ============================================================
+// INVENTORY  (data-driven grid — easy to add more slots later)
+// ============================================================
+function closeInventory() {
+  fetch('https://pvp-wars/warsCloseInventory', { method:'POST', body:JSON.stringify({}) });
+  document.getElementById('wars-inventory').classList.remove('open');
+}
+
+function buildInventoryItems(data) {
+  const items = [];
+  items.push({
+    icon: '💉', label: 'Syringe', qty: data.syringe || 0, usable: (data.syringe || 0) > 0,
+    detail: `<b>Wars Syringe</b><br>+40 HP · +25 Armor on use. Press <b>[G]</b> in the field, or use it here.`,
+    action: 'useSyringeFromInventory',
+  });
+  items.push({
+    icon: '🔫', label: realEquippedWeapon ? weaponDisplayName(realEquippedWeapon) : 'No Weapon Equipped', qty: null, usable: false,
+    detail: realEquippedWeapon
+      ? `<b>Equipped:</b> ${weaponDisplayName(realEquippedWeapon)}<br>Change it from the Loadout Shop — <b>[F4]</b>.`
+      : `No loadout weapon currently equipped (starter sidearm only). Open the Loadout Shop with <b>[F4]</b> to pick one.`,
+  });
+  items.push({
+    icon: '💵', label: 'Wars Cash', qty: '$' + formatMoney(data.money || 0), usable: false,
+    detail: `<b>Wars Cash:</b> $${formatMoney(data.money || 0)}<br>Earned from kills in an official session. Separate from Turf Wars money.`,
+  });
+  // Pad remaining slots so the grid always reads as a real inventory
+  while (items.length < 8) items.push({ empty: true });
+  return items;
+}
+
+function renderInventory(data) {
+  syringeCount  = data.syringe || 0;
+  currentMoney  = data.money || 0;
+  activeLoadout = data.loadout;
+
+  const items = buildInventoryItems(data);
+  const grid = document.getElementById('inv-grid');
+  grid.innerHTML = items.map((it, i) => {
+    if (it.empty) return `<div class="inv-slot empty"></div>`;
+    return `<div class="inv-slot${it.usable ? ' usable' : ''}" onclick="showInvDetail(${i})">
+      <div class="inv-slot-icon">${it.icon}</div>
+      <div class="inv-slot-label">${it.label}</div>
+      ${it.qty !== null ? `<div class="inv-slot-qty">${it.qty}</div>` : ''}
+    </div>`;
+  }).join('');
+  grid.dataset.items = JSON.stringify(items);
+  document.getElementById('inv-detail').innerHTML = 'Click an item to see what it does.';
+}
+
+function showInvDetail(i) {
+  const items = JSON.parse(document.getElementById('inv-grid').dataset.items || '[]');
+  const it = items[i];
+  if (!it || it.empty) return;
+  let html = it.detail;
+  if (it.usable) html += `<br><br><span class="btn-ghost" onclick="${it.action}()">Use now →</span>`;
+  document.getElementById('inv-detail').innerHTML = html;
+}
+
+function useSyringeFromInventory() {
+  fetch('https://pvp-wars/warsUseSyringe', { method:'POST', body:JSON.stringify({}) });
+}
+
+// ============================================================
+// MONEY UI
+// ============================================================
+function updateMoneyUI() {
+  const m = formatMoney(currentMoney);
+  document.getElementById('hud-money').textContent = m;
+  if (warsBalanceEl) warsBalanceEl.textContent = '$' + m;
+}
+
+// ============================================================
+// HUD  (two modes: waiting vs. active official session)
+// ============================================================
+function showWaitingHUD(mapName) {
+  const badge = document.getElementById('wars-badge');
+  const main  = document.getElementById('hud-badge-main');
+  badge.classList.add('visible');
+  main.classList.add('waiting');
+  const pill = document.getElementById('hud-team-pill');
+  pill.className = 'wars-team-pill waiting';
+  pill.innerHTML = '<span class="dot"></span> WAITING';
+  document.getElementById('hud-map-label').textContent = mapName || 'WARS';
+  document.getElementById('wars-hints').classList.add('visible');
+  document.getElementById('wars-hint-admin').style.display = 'flex';
+}
+
+function showSessionHUD(team, mapName, syringe) {
+  const badge = document.getElementById('wars-badge');
+  const main  = document.getElementById('hud-badge-main');
+  badge.classList.add('visible');
+  main.classList.remove('waiting');
+  const pill = document.getElementById('hud-team-pill');
+  pill.textContent = teamDisplayName(team);
+  pill.className = 'wars-team-pill ' + team;
+  document.getElementById('hud-map-label').textContent = mapName || 'WARS';
+  document.getElementById('hud-syringe').textContent = syringe || 0;
+  document.getElementById('wars-killfeed').classList.add('visible');
+  document.getElementById('wars-hints').classList.add('visible');
+  document.getElementById('wars-hint-admin').style.display = 'none';
+  document.getElementById('wars-leaderboard').classList.add('visible');
+}
+
+function hideSessionHUD() {
+  document.getElementById('wars-badge').classList.remove('visible');
+  document.getElementById('wars-killfeed').classList.remove('visible');
+  document.getElementById('wars-hints').classList.remove('visible');
+  document.getElementById('wars-leaderboard').classList.remove('visible');
+}
+
+// ============================================================
+// SIEGE-STYLE TOP-BAR TEAM UI
+// Portrait: ped headshot txd from RegisterPedheadshot (Lua).
+// FiveM NUI loads headshot textures via:
+//   `nui://game/textures/<txdString>` — NO .png extension.
+// Falls back to coloured initials while the headshot registers.
+// No player name shown. Empty sides hidden automatically via CSS.
+// ============================================================
+
+const playerPortraits = {}; // { [serverId]: txdString }
+
+function opInitials(name) {
+  return (name || '??').slice(0, 2).toUpperCase();
+}
+
+// FIX (the actual root cause of "outfit reverts to the one I started with"):
+// FiveM/GTA only has a tiny internal pool of headshot render slots -- in
+// practice we saw it alternate between just "pedmugshot_32" and
+// "pedmugshot_33" for a single player, every single recapture, forever.
+// The Lua side IS re-rendering fresh pixel data into that slot every time
+// (confirmed via debug logging -- sub-200ms, correct generation handling,
+// zero staleness). The problem is the BROWSER: an <img src="https://nui-img/
+// pedmugshot_32/pedmugshot_32"> URL is byte-for-byte identical every time
+// slot 32 comes back around, and the browser's own image cache serves the
+// FIRST bitmap it ever fetched for that exact URL -- which, for any given
+// player, is whatever they were wearing the moment they entered the mode
+// (the first capture that ever claimed that slot). That's exactly "reverts
+// to the one I started off with."
+//
+// playerPortraitVersions tracks a per-player counter that increments every
+// time a genuinely NEW headshotReady arrives. Appending it as a query
+// string on the image URL forces the browser to treat each new capture as
+// a different resource and actually re-fetch it, while still letting it
+// cache normally between renders of the SAME already-current image.
+const playerPortraitVersions = {}; // { [serverId]: number }
+
+function portraitUrl(serverId, txd) {
+  const ver = playerPortraitVersions[serverId] || 0;
+  return `https://nui-img/${txd}/${txd}?v=${ver}`;
+}
+
+function opPortraitInner(p) {
+  const txd = playerPortraits[p.id] || p.portrait;
+  const initials = opInitials(p.name);
+  if (txd) {
+    return `<img src="${portraitUrl(p.id, txd)}"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="">
+            <div class="op-portrait-placeholder" style="display:none">${initials}</div>`;
+  }
+  return `<div class="op-portrait-placeholder">${initials}</div>`;
+}
+
+function buildOpCard(p) {
+  const dead   = p.alive === false;
+  const hp     = (p.health != null) ? p.health : 100;
+  const kills  = p.kills  || 0;
+  const deaths = p.deaths || 0;
+  const kdStr  = deaths === 0 ? kills.toFixed(1) : (kills / deaths).toFixed(2);
+  const hpLow  = hp > 0 && hp <= 35;
+
+  const card = document.createElement('div');
+  card.className = 'op-card' + (dead ? ' dead' : '');
+  card.dataset.pid = p.id;
+
+  card.innerHTML = `
+    <div class="op-portrait">
+      ${opPortraitInner(p)}
+      <div class="op-skull">💀</div>
+    </div>
+    <div class="op-info">
+      <div class="op-kd"><span class="kd-val">${kdStr}</span> K/D</div>
+      <div class="op-hp-wrap">
+        <div class="op-hp-bar${hpLow ? ' low' : ''}" style="width:${hp}%"></div>
+      </div>
+      <div class="op-hp-text">${dead ? 'DOWN' : hp + ' HP'}</div>
+    </div>
+  `;
+  return card;
+}
+
+// Update HP bar, HP text, and K/D on existing cards without rebuilding them.
+// This avoids wiping portraits on every health tick.
+function updateCardStats(roster) {
+  roster.forEach(p => {
+    const card = document.querySelector(`.op-card[data-pid="${p.id}"]`);
+    if (!card) return;
+    const dead   = p.alive === false;
+    const hp     = (p.health != null) ? p.health : 100;
+    const kills  = p.kills  || 0;
+    const deaths = p.deaths || 0;
+    const kdStr  = deaths === 0 ? kills.toFixed(1) : (kills / deaths).toFixed(2);
+    const hpLow  = hp > 0 && hp <= 35;
+
+    // Update dead class
+    card.classList.toggle('dead', dead);
+
+    // HP bar
+    const bar = card.querySelector('.op-hp-bar');
+    if (bar) {
+      bar.style.width = hp + '%';
+      bar.className = 'op-hp-bar' + (hpLow ? ' low' : '');
+    }
+    // HP text
+    const hpText = card.querySelector('.op-hp-text');
+    if (hpText) hpText.textContent = dead ? 'DOWN' : hp + ' HP';
+    // K/D
+    const kdVal = card.querySelector('.kd-val');
+    if (kdVal) kdVal.textContent = kdStr;
+  });
+}
+
+function renderTeamUi() {
+  const atkEl = document.getElementById('siege-side-atk');
+  const defEl = document.getElementById('siege-side-def');
+  const notch = document.querySelector('.siege-notch');
+  if (!atkEl || !defEl) return;
+
+  const mineRoster  = myTeamSide === 'bravo' ? teamUiBravo : teamUiAlpha;
+  const enemyRoster = myTeamSide === 'bravo' ? teamUiAlpha : teamUiBravo;
+
+  atkEl.innerHTML = '';
+  defEl.innerHTML = '';
+
+  mineRoster.forEach(p  => atkEl.appendChild(buildOpCard(p)));
+  enemyRoster.forEach(p => defEl.appendChild(buildOpCard(p)));
+
+  // Hide sides and notch when empty so the bar collapses cleanly
+  atkEl.style.display = mineRoster.length  ? '' : 'none';
+  defEl.style.display = enemyRoster.length ? '' : 'none';
+  if (notch) notch.style.display = (mineRoster.length && enemyRoster.length) ? '' : 'none';
+
+  const teamUiEl = document.getElementById('wars-team-ui');
+  if (teamUiEl) {
+    teamUiEl.classList.toggle('visible', mineRoster.length > 0 || enemyRoster.length > 0);
+  }
+}
+
+function setAlivePlayerStatus(pid, isAlive) {
+  [teamUiAlpha, teamUiBravo].forEach(list => {
+    const entry = list.find(p => p.id === pid);
+    if (entry) entry.alive = isAlive;
+  });
+  renderTeamUi();
+}
+
+// ============================================================
+// SESSION LEADERBOARD
+// ============================================================
+function renderLeaderboard(rows) {
+  const lb = document.getElementById('wars-leaderboard');
+  // Remove all rows but keep the header
+  while (lb.children.length > 1) lb.removeChild(lb.lastChild);
+  if (!rows || rows.length === 0) return;
+  rows.forEach((r, i) => {
+    const div = document.createElement('div');
+    div.className = 'lb-row';
+    div.innerHTML =
+      `<span class="lb-rank">#${i + 1}</span>` +
+      `<span class="lb-name">${r.name}</span>` +
+      `<span class="lb-kills">${r.total}<span class="lb-npc"> (${r.npc}npc)</span></span>`;
+    lb.appendChild(div);
+  });
+}
+
+
+
+// ============================================================
+// KILL FEED
+// ============================================================
+function addKillFeed(killer, victim, headshot) {
+  const feed = document.getElementById('wars-killfeed');
+  const row = document.createElement('div');
+  row.className = 'kf-row';
+  row.innerHTML = `<span class="kf-killer">${killer}</span>
+    <span class="kf-arrow">→</span>
+    <span class="kf-victim">${victim}</span>
+    ${headshot ? '<span class="kf-hs">HEADSHOT</span>' : ''}`;
+  feed.insertBefore(row, feed.firstChild);
+  setTimeout(() => row.remove(), 5000);
+}
+
+// ============================================================
+// ADMIN NOTIFICATION STACK
+// FIX: each request gets its OWN card appended to the stack instead
+// of overwriting a single shared element. Each card auto-dismisses
+// on its own 12s timer; the others naturally shift up via flexbox
+// gap as a card above them is removed. Subtext changed from
+// "CLICK TO OPEN ADMIN PANEL" (admins have no mouse/cursor access in
+// most FiveM UIs while playing) to the real way to open it: [F9].
+// ============================================================
+function addAdminNotificationCard(requesterName, requesterId, reasonText) {
+  const stack = document.getElementById('admin-notification-stack');
+
+  const card = document.createElement('div');
+  card.className = 'admin-notif-card';
+  card.innerHTML = `
+    <div class="notif-text">⚔️ ${requesterName} (id:${requesterId}) ${reasonText || 'wants a Wars session'}</div>
+    <div class="notif-sub">PRESS [F9] TO OPEN ADMIN PANEL</div>
+  `;
+  card.addEventListener('click', openAdminPanel);
+  stack.appendChild(card);
+
+  setTimeout(() => {
+    card.classList.add('leaving');
+    setTimeout(() => card.remove(), 200); // matches admin-notif-out duration
+  }, 12000);
+}
+
+// ============================================================
+// TEAM TOAST
+// ============================================================
+function showTeamToast(team) {
+  const toast = document.getElementById('team-toast');
+  const colors = { alpha: 'var(--alpha)', bravo: 'var(--bravo)' };
+  toast.style.color = colors[team] || 'var(--text-1)';
+  toast.style.borderBottom = '3px solid ' + (colors[team] || 'var(--accent)');
+  toast.textContent = `YOU ARE ON ${teamDisplayName(team)}`;
+  toast.style.display = 'block';
+  setTimeout(() => toast.style.display = 'none', 4500);
+}
+
+// ============================================================
+// ADMIN PANEL
+// ============================================================
+function openAdminPanel() {
+  fetch('https://pvp-wars/warsOpenAdminPanel', { method:'POST', body:JSON.stringify({}) });
+}
+
+function closeAdminPanel() {
+  fetch('https://pvp-wars/warsCloseAdminPanel', { method:'POST', body:JSON.stringify({}) });
+  document.getElementById('admin-panel').classList.remove('open');
+}
+
+function renderAdminPanel(data) {
+  adminAllPlayers = data.allPlayers || [];
+  adminAlpha      = data.alpha || [];
+  adminBravo      = data.bravo || [];
+  adminMaps       = data.maps || [];
+  adminWaiting    = data.waiting || [];
+
+  // Player list
+  const playerList = document.getElementById('admin-player-list');
+  const playerSelect = document.getElementById('admin-player-select');
+  playerList.innerHTML = '';
+  playerSelect.innerHTML = '<option value="">-- Select player --</option>';
+
+  for (const p of adminAllPlayers) {
+    const teamAlpha = adminAlpha.find(x => x.id === p.id);
+    const teamBravo = adminBravo.find(x => x.id === p.id);
+    const teamLabel = teamAlpha ? '<span class="admin-player-team alpha">TEAM 1</span>'
+                    : teamBravo ? '<span class="admin-player-team bravo">TEAM 2</span>' : '';
+
+    const item = document.createElement('div');
+    item.className = 'admin-player-item' + (selectedAdminPlayer === p.id ? ' selected' : '');
+    item.innerHTML = `<div><div class="admin-player-name">${p.name}</div><div class="admin-player-id">id: ${p.id}</div></div>${teamLabel}`;
+    item.onclick = () => {
+      selectedAdminPlayer = p.id;
+      document.getElementById('admin-player-select').value = p.id;
+      document.querySelectorAll('.admin-player-item').forEach(i => i.classList.remove('selected'));
+      item.classList.add('selected');
+    };
+    playerList.appendChild(item);
+
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = `${p.name} (id:${p.id})`;
+    playerSelect.appendChild(opt);
+  }
+
+  // Waiting-on-a-map list (no team yet)
+  const waitList = document.getElementById('admin-waiting-list');
+  waitList.innerHTML = adminWaiting.length
+    ? adminWaiting.map(w => `<div class="admin-waiting-item"><span>${w.name}</span><span class="map">${w.mapName}</span></div>`).join('')
+    : `<div style="font-size:11px;color:var(--text-3);padding:4px 2px;">Nobody's picked a map yet.</div>`;
+
+  // Team boxes
+  renderTeamBox('admin-alpha-list', 'alpha-count', adminAlpha);
+  renderTeamBox('admin-bravo-list', 'bravo-count', adminBravo);
+
+  // Maps
+  const mapSelect = document.getElementById('admin-map-select');
+  mapSelect.innerHTML = '<option value="">-- Select map --</option>';
+  for (const m of adminMaps) {
+    const opt = document.createElement('option');
+    opt.value = m.index;
+    opt.textContent = `${m.name} — ${m.desc}`;
+    if (data.map === m.index) opt.selected = true;
+    mapSelect.appendChild(opt);
+  }
+
+  document.getElementById('admin-panel').classList.add('open');
+}
+
+function renderTeamBox(listId, countId, members) {
+  const list = document.getElementById(listId);
+  const count = document.getElementById(countId);
+  list.innerHTML = '';
+  count.textContent = `(${members.length}/5)`;
+  for (const m of members) {
+    const el = document.createElement('div');
+    el.className = 'admin-team-member';
+    el.innerHTML = `<span>${m.name}</span><button class="admin-remove-btn" onclick="removePlayer(${m.id})">✕</button>`;
+    list.appendChild(el);
+  }
+}
+
+function assignTeam(side) {
+  const sel = document.getElementById('admin-player-select');
+  const pid = parseInt(sel.value || selectedAdminPlayer);
+  if (!pid) { showAdminFeedback('Select a player first.', false); return; }
+  fetch('https://pvp-wars/warsAdminAction', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'assignTeam', playerId: pid, team: side })
+  });
+}
+
+function removePlayer(pid) {
+  fetch('https://pvp-wars/warsAdminAction', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'removePlayer', playerId: pid })
+  });
+}
+
+function setMap() {
+  const sel = document.getElementById('admin-map-select');
+  const idx = parseInt(sel.value);
+  if (!idx) { showAdminFeedback('Select a map first.', false); return; }
+  fetch('https://pvp-wars/warsAdminAction', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'setMap', mapIndex: idx })
+  });
+}
+
+function startSession() {
+  fetch('https://pvp-wars/warsAdminAction', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'startSession' })
+  });
+}
+
+// ============================================================
+// GENERIC CONFIRM MODAL  —  replaces window.confirm()
+// ============================================================
+const warsGenericConfirmEl     = document.getElementById('wars-generic-confirm-modal');
+const warsGenericConfirmLabel  = document.getElementById('wars-generic-confirm-label');
+const warsGenericConfirmMsg    = document.getElementById('wars-generic-confirm-message');
+const warsGenericConfirmCancel = document.getElementById('wars-generic-confirm-cancel-btn');
+const warsGenericConfirmOk     = document.getElementById('wars-generic-confirm-ok-btn');
+let warsGenericConfirmAction   = null;
+
+function showGenericConfirm(label, message, onConfirm) {
+  warsGenericConfirmLabel.textContent = label;
+  warsGenericConfirmMsg.textContent   = message;
+  warsGenericConfirmAction = onConfirm;
+  warsGenericConfirmEl.classList.add('open');
+}
+
+function closeGenericConfirm() {
+  warsGenericConfirmEl.classList.remove('open');
+  warsGenericConfirmAction = null;
+}
+
+warsGenericConfirmCancel.addEventListener('click', closeGenericConfirm);
+warsGenericConfirmOk.addEventListener('click', () => {
+  const action = warsGenericConfirmAction;
+  closeGenericConfirm();
+  if (action) action();
+});
+
+function endSession() {
+  // FIX: was window.confirm('End the current Wars session?'), a
+  // native browser dialog that pops a separate OS window outside the
+  // game ("JavaScript Confirm - http-pvp-wars"). Replaced with the
+  // in-NUI modal above.
+  showGenericConfirm('End Session', 'End the current Wars session?', () => {
+    fetch('https://pvp-wars/warsAdminAction', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'endSession' })
+    });
+  });
+}
+
+function showAdminFeedback(msg, ok) {
+  const box = document.getElementById('admin-feedback-box');
+  box.innerHTML = `<div class="admin-feedback ${ok ? 'ok' : 'err'}">${msg}</div>`;
+  setTimeout(() => box.innerHTML = '', 4000);
+}
+
+// ============================================================
+// NUI MESSAGE HANDLER
+// ============================================================
+window.addEventListener('message', function(event) {
+  const data = event.data;
+  if (!data || !data.type) return;
+
+  switch (data.type) {
+
+    case 'openMapPicker':
+      document.getElementById('wars-mappicker').classList.add('open');
+      break;
+
+    case 'mapList':
+      renderMapPicker(data.maps || []);
+      break;
+
+    case 'closeMapPicker':
+      document.getElementById('wars-mappicker').classList.remove('open');
+      break;
+
+    case 'enterWaiting':
+      currentMoney = data.money || 0;
+      syringeCount = data.syringe || 0;
+      updateMoneyUI();
+      document.getElementById('hud-syringe').textContent = syringeCount;
+      showWaitingHUD(data.mapName);
+      // Defense-in-depth: guarantee no overlay panel is left open
+      // (this is what caused the dark/blurred screen bug on arrival).
+      document.getElementById('wars-mappicker').classList.remove('open');
+      document.getElementById('wars-weapon-menu').classList.remove('open');
+      document.getElementById('wars-inventory').classList.remove('open');
+      document.getElementById('admin-panel').classList.remove('open');
+      break;
+
+    case 'leaveWaiting':
+      hideSessionHUD();
+      break;
+
+    case 'openShop':
+      document.getElementById('wars-weapon-menu').classList.add('open');
+      renderShop();
+      break;
+
+    case 'closeShop':
+      document.getElementById('wars-weapon-menu').classList.remove('open');
+      break;
+
+    case 'realEquippedWeapon':
+      // FIX: ground truth from Lua's GetCurrentPedWeapon, sent every
+      // time the shop opens and again once shopData's weapon list
+      // round-trip completes. Lua sends null/None when not holding
+      // anything from the loadout list (starter sidearm, fists, etc).
+      realEquippedWeapon = data.weapon || null;
+      renderShop();
+      break;
+
+    case 'toggleShop': {
+      // FIX: this is the real fix for "F4 opens but won't close." The
+      // old flow had Lua's IsShopOpen flag and this panel's actual
+      // open/closed DOM state as two SEPARATE booleans that had to
+      // stay perfectly in sync forever -- every place that force-closed
+      // the panel (session start/end, leaving, entering waiting, the
+      // in-panel close button, Escape) had to remember to also reset
+      // Lua's flag, and any one miss permanently flips the parity from
+      // then on. pvp-turf never has this problem because its F4
+      // handler sends ONE message ("toggleWeaponMenu") and lets the JS
+      // side -- which actually owns the visible DOM state -- decide
+      // what "toggle" means by checking itself. Doing the same here:
+      // JS reads its own real classList state and flips it, so there's
+      // only ONE source of truth and nothing can desync. JS reports
+      // back what it actually did so Lua's SetNuiFocus follows the
+      // real result instead of a guess.
+      const menu = document.getElementById('wars-weapon-menu');
+      if (menu.classList.contains('open')) {
+        menu.classList.remove('open');
+        fetch('https://pvp-wars/warsCloseShop', { method:'POST', body:JSON.stringify({}) });
+      } else {
+        menu.classList.add('open');
+        renderShop();
+        fetch('https://pvp-wars/warsShopOpened', { method:'POST', body:JSON.stringify({}) });
+      }
+      break;
+    }
+
+    case 'shopData': {
+      const d = data.data || {};
+      ownedWeapons  = d.owned || {};
+      activeLoadout = d.loadout || null;   // null if server has no loadout for this player (e.g. after hub return)
+      currentMoney  = d.money || 0;
+      shopWeapons   = d.weapons || [];
+      shopSyringeCount = d.syringeCount || 0;
+      shopSyringePrice = d.syringePrice || 350;
+      shopSyringeMax   = d.syringeMax || 6;
+      updateMoneyUI();
+      renderShop();
+      break;
+    }
+
+    case 'openInventory':
+      document.getElementById('wars-inventory').classList.add('open');
+      break;
+
+    case 'inventoryData':
+      renderInventory(data.data || {});
+      break;
+
+    case 'closeInventory':
+      document.getElementById('wars-inventory').classList.remove('open');
+      break;
+
+    case 'moneyUpdated':
+      currentMoney = data.amount || 0;
+      updateMoneyUI();
+      if (shopWeapons.length) renderShop();
+      break;
+
+    case 'purchaseResult':
+      if (data.success) {
+        ownedWeapons[data.weapon] = true;
+        activeLoadout = data.weapon;
+        renderShop();
+      }
+      // Failure feedback already comes through as a chat message from
+      // the server (insufficient funds / already owned) -- nothing
+      // else to do here on failure.
+      break;
+
+    case 'loadoutConfirmed':
+      activeLoadout = data.weapon;
+      renderShop();
+      break;
+
+    case 'teamAssigned':
+      myTeamSide = data.team || myTeamSide;
+      showTeamToast(data.team);
+      break;
+
+    case 'sessionStart':
+      sessionActive = true;
+      syringeCount  = data.syringe || 0;
+      currentMoney  = data.money || 0;
+      myTeamSide    = data.team || myTeamSide;
+      updateMoneyUI();
+      showSessionHUD(data.team, data.mapName, data.syringe);
+      document.getElementById('wars-mappicker').classList.remove('open');
+      document.getElementById('wars-weapon-menu').classList.remove('open');
+      document.getElementById('wars-inventory').classList.remove('open');
+      break;
+
+    case 'sessionEnd':
+      sessionActive = false;
+      activeLoadout = null;   // clear stale equip state for next session
+      ownedWeapons  = {};
+      Object.keys(playerPortraits).forEach(k => delete playerPortraits[k]);
+      Object.keys(playerPortraitVersions).forEach(k => delete playerPortraitVersions[k]);
+      hideSessionHUD();
+      document.getElementById('admin-panel').classList.remove('open');
+      document.getElementById('wars-mappicker').classList.remove('open');
+      document.getElementById('wars-weapon-menu').classList.remove('open');
+      document.getElementById('wars-inventory').classList.remove('open');
+      renderLeaderboard([]);  // clear leaderboard
+      teamUiAlpha = [];
+      teamUiBravo = [];
+      renderTeamUi();
+      break;
+
+    case 'leaderboardUpdate':
+      renderLeaderboard(data.rows || []);
+      break;
+
+    case 'headshotReady': {
+      if (data.id && data.txd) {
+        // Bump the version FIRST so portraitUrl() below (and any future
+        // re-render) produces a fresh, never-before-seen URL for this
+        // capture -- this is what actually forces the browser to fetch
+        // the new pixels instead of serving back whatever it cached the
+        // last time this same slot name (e.g. "pedmugshot_32") was used.
+        playerPortraitVersions[data.id] = (playerPortraitVersions[data.id] || 0) + 1;
+
+        playerPortraits[data.id] = data.txd;
+        [teamUiAlpha, teamUiBravo].forEach(list => {
+          const p = list.find(x => String(x.id) === String(data.id));
+          if (p) p.portrait = data.txd;
+        });
+        // Swap the img src directly on existing cards — no full rebuild, no flicker.
+        const cards = document.querySelectorAll(`.op-card[data-pid="${data.id}"]`);
+        if (cards.length > 0) {
+          cards.forEach(card => {
+            const portrait = card.querySelector('.op-portrait');
+            if (!portrait) return;
+            let img = portrait.querySelector('img');
+            if (img) {
+              // Card already has an img — just update src in place
+              img.src = portraitUrl(data.id, data.txd);
+            } else {
+              // Card only has initials placeholder — swap to img now
+              const initials = opInitials(
+                ([...teamUiAlpha, ...teamUiBravo].find(x => String(x.id) === String(data.id)) || {}).name
+              );
+              const placeholder = portrait.querySelector('.op-portrait-placeholder');
+              const skull = portrait.querySelector('.op-skull');
+              if (placeholder) placeholder.style.display = 'none';
+              const newImg = document.createElement('img');
+              newImg.src = portraitUrl(data.id, data.txd);
+              newImg.alt = '';
+              newImg.onerror = function() {
+                this.style.display = 'none';
+                if (placeholder) placeholder.style.display = 'flex';
+              };
+              portrait.insertBefore(newImg, skull || null);
+            }
+          });
+        } else {
+          // Card doesn't exist yet — full render needed
+          renderTeamUi();
+        }
+      }
+      break;
+    }
+
+    case 'rosterSync': {
+      myTeamSide = data.myTeam || myTeamSide;
+
+      // Merge incoming roster data into existing arrays.
+      // If we already have an entry for a player, keep their cached portrait
+      // and only update the live fields (health, kills, deaths, alive).
+      // This stops portrait flicker caused by full array replacement.
+      function mergeRoster(existing, incoming) {
+        if (!incoming || incoming.length === 0) return incoming || [];
+        const result = [];
+        incoming.forEach(p => {
+          const old = existing.find(e => String(e.id) === String(p.id));
+          if (old) {
+            // FIX: this used to be `p.portrait = old.portrait || p.portrait`,
+            // which ALWAYS preferred the previously cached portrait over the
+            // one in THIS message -- meaning once a portrait was cached, no
+            // future rosterSync (which fires on every kill/death/respawn/join,
+            // i.e. constantly during a live match) could ever update it. The
+            // only thing that could override it was a direct 'headshotReady'
+            // message. Net effect: change outfit -> headshotReady flips the
+            // portrait to the new one for a moment -> the next unrelated
+            // kill/death anywhere in the match fires rosterSync -> this merge
+            // stomped it right back to the stale cached value. That's the
+            // "fights between new fit and old fit" bug.
+            //
+            // Lua's EnrichRosterWithHeadshots only sets entry.portrait when it
+            // actually has a cached txd to send (see pvp-wars/client.lua) --
+            // if a recapture is genuinely mid-flight, p.portrait arrives here
+            // as undefined, not stale data. So: prefer the incoming value
+            // whenever it exists (it's the most current known-good state),
+            // and only fall back to the old cached one when this message
+            // truly didn't include a portrait at all (capture in-flight),
+            // which avoids wiping the image to a blank placeholder mid-load.
+            if (p.portrait === undefined) {
+              p.portrait = old.portrait;
+            }
+          }
+          result.push(p);
+        });
+        return result;
+      }
+
+      const newAlpha = mergeRoster(teamUiAlpha, data.alpha || []);
+      const newBravo = mergeRoster(teamUiBravo, data.bravo || []);
+
+      // Check if player list changed (join/leave) or just stats updated
+      const rosterChanged =
+        newAlpha.length !== teamUiAlpha.length ||
+        newBravo.length !== teamUiBravo.length ||
+        newAlpha.some((p, i) => String(p.id) !== String((teamUiAlpha[i] || {}).id)) ||
+        newBravo.some((p, i) => String(p.id) !== String((teamUiBravo[i] || {}).id));
+
+      teamUiAlpha = newAlpha;
+      teamUiBravo = newBravo;
+
+      if (rosterChanged) {
+        // Full rebuild only when players join/leave
+        renderTeamUi();
+      } else {
+        // Stats-only update: patch cards in-place, no portrait wipe
+        updateCardStats(teamUiAlpha);
+        updateCardStats(teamUiBravo);
+      }
+      break;
+    }
+
+    case 'aliveStatusChanged':
+      setAlivePlayerStatus(data.id, data.alive);
+      break;
+
+    case 'clearPortrait': {
+      // Remove the stale txd from both the portrait cache and the roster
+      // entries so the next headshotReady fires with a clean slate.
+      const pid = data.id;
+      delete playerPortraits[pid];
+      [teamUiAlpha, teamUiBravo].forEach(list => {
+        const p = list.find(x => String(x.id) === String(pid));
+        if (p) delete p.portrait;
+      });
+      // Rebuild that card immediately — shows initials while new shot loads
+      renderTeamUi();
+      break;
+    }
+
+    case 'syringeUpdate':
+      syringeCount = data.count || 0;
+      document.getElementById('hud-syringe').textContent = syringeCount;
+      break;
+
+    case 'syringePurchaseResult':
+      if (data.success) {
+        shopSyringeCount = data.count || 0;
+        syringeCount = shopSyringeCount;
+        document.getElementById('hud-syringe').textContent = syringeCount;
+        renderShop();
+      }
+      break;
+
+    case 'warsKillFeed':
+      addKillFeed(data.killer, data.victim, data.headshot);
+      break;
+
+    case 'adminNotification':
+      addAdminNotificationCard(data.requesterName, data.requesterId, data.reasonText);
+      break;
+
+    case 'openAdminPanel':
+      // state was just requested; renderAdminPanel called from adminState
+      break;
+
+    case 'adminState':
+      renderAdminPanel(data.data || {});
+      break;
+
+    case 'closeAdminPanel':
+      document.getElementById('admin-panel').classList.remove('open');
+      break;
+
+    case 'adminFeedback':
+      showAdminFeedback(data.message, data.success);
+      // Refresh state
+      fetch('https://pvp-wars/warsAdminAction', {
+        method:'POST', body: JSON.stringify({ action:'requestState' })
+      });
+      break;
+  }
+});
+
+// ============================================================
+// ESC closes whichever panel is open
+// ============================================================
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Escape') return;
+  if (document.getElementById('wars-generic-confirm-modal').classList.contains('open')) closeGenericConfirm();
+  else if (document.getElementById('wars-confirm-modal').classList.contains('open')) closeWarsConfirmModal();
+  else if (document.getElementById('admin-panel').classList.contains('open')) closeAdminPanel();
+  else if (document.getElementById('wars-weapon-menu').classList.contains('open')) closeShop();
+  else if (document.getElementById('wars-inventory').classList.contains('open')) closeInventory();
+  else if (document.getElementById('wars-mappicker').classList.contains('open')) closeMapPicker();
+});
+
+// ============================================================
+// [F4] CLOSES THE SHOP WHILE IT'S FOCUSED -- THE REAL FIX
+// FIX: pvp-turf's arsenal menu has this exact same listener
+// (window.addEventListener("keydown", e => { if (e.key === "F4" &&
+// menuVisible) ... }) in pvp-turf/html/index.html) and it's the
+// reason turf's F4 close works and wars's didn't. While a FiveM NUI
+// has focus (SetNuiFocus(true, true), which happens the moment this
+// panel opens), the browser layer captures ALL keyboard input --
+// FXServer's RegisterKeyMapping/RegisterCommand never sees the second
+// F4 press at all in that state, it never reaches Lua. Escape and
+// mouse-clicks worked because THIS PAGE's own JS listens for those
+// directly (see the ESC handler above and the close button's onclick)
+// -- they never depended on RegisterCommand firing a second time
+// either. F4 needs that same direct, in-page listener; relying on
+// the Lua keybind alone can never close a focused NUI panel.
+// ============================================================
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'F4' && document.getElementById('wars-weapon-menu').classList.contains('open')) {
+    closeShop();
+  }
+});
+</script>
+</body>
+</html>
